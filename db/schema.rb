@@ -10,8 +10,106 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 0) do
+ActiveRecord::Schema[7.1].define(version: 2025_03_10_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
+  create_table "action_beats", force: :cascade do |t|
+    t.bigint "scene_id", null: false
+    t.text "description", null: false
+    t.integer "order_number"
+    t.text "dialogue"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["scene_id"], name: "index_action_beats_on_scene_id"
+  end
+
+  create_table "production_users", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "production_id", null: false
+    t.string "role", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["production_id"], name: "index_production_users_on_production_id"
+    t.index ["user_id", "production_id"], name: "index_production_users_on_user_id_and_production_id", unique: true
+    t.index ["user_id"], name: "index_production_users_on_user_id"
+  end
+
+  create_table "productions", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.date "start_date"
+    t.date "end_date"
+    t.string "status", default: "active"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "scenes", force: :cascade do |t|
+    t.bigint "sequence_id", null: false
+    t.string "number", null: false
+    t.string "name"
+    t.text "description"
+    t.string "setting"
+    t.string "time_of_day"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sequence_id", "number"], name: "index_scenes_on_sequence_id_and_number", unique: true
+    t.index ["sequence_id"], name: "index_scenes_on_sequence_id"
+  end
+
+  create_table "scripts", force: :cascade do |t|
+    t.bigint "production_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "version"
+    t.date "date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["production_id"], name: "index_scripts_on_production_id"
+  end
+
+  create_table "sequences", force: :cascade do |t|
+    t.bigint "script_id", null: false
+    t.string "number", null: false
+    t.string "name"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["script_id", "number"], name: "index_sequences_on_script_id_and_number", unique: true
+    t.index ["script_id"], name: "index_sequences_on_script_id"
+  end
+
+  create_table "shots", force: :cascade do |t|
+    t.bigint "action_beat_id", null: false
+    t.string "number", null: false
+    t.text "description"
+    t.string "camera_angle"
+    t.string "camera_movement"
+    t.string "status", default: "pending"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action_beat_id"], name: "index_shots_on_action_beat_id"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "email", null: false
+    t.string "password_digest", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.boolean "admin", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+  end
+
+  add_foreign_key "action_beats", "scenes"
+  add_foreign_key "production_users", "productions"
+  add_foreign_key "production_users", "users"
+  add_foreign_key "scenes", "sequences"
+  add_foreign_key "scripts", "productions"
+  add_foreign_key "sequences", "scripts"
+  add_foreign_key "shots", "action_beats"
 end
