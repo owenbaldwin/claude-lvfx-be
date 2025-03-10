@@ -1,8 +1,8 @@
 FactoryBot.define do
   factory :scene do
-    sequence
-    script
-    production
+    association :sequence
+    association :script
+    association :production
     number { Faker::Number.unique.between(from: 1, to: 100) }
     int_ext { ['interior', 'exterior'].sample }
     location { Faker::Movies::HarryPotter.location }
