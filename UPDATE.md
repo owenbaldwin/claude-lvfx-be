@@ -27,7 +27,7 @@ All models have been enhanced with:
 ### Action Beats
 - Added `script_id`, `production_id`, and `sequence_id` foreign keys
 - Renamed `order_number` to `number`
-- Added `type` field with 'action'/'dialogue' enum
+- Added `beat_type` field with 'action'/'dialogue' enum (note: avoiding Rails STI 'type' column name)
 - Added `text` field for the main content
 - Made description optional
 - Ensured uniqueness within a scene
@@ -49,6 +49,8 @@ Created four migrations to update the tables:
 - `20250310000104_update_shots.rb`
 
 These migrations add all the necessary fields, foreign keys, and indexes for proper database relationships and performance.
+
+> **Important:** We named the action beat type field `beat_type` instead of `type` to avoid conflicts with Rails Single Table Inheritance (STI) which reserves the column name "type".
 
 ## 3. Controller Updates
 
