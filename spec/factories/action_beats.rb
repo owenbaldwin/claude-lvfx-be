@@ -1,9 +1,9 @@
 FactoryBot.define do
   factory :action_beat do
-    scene
-    sequence
-    script
-    production
+    association :scene
+    association :sequence
+    association :script
+    association :production
     number { Faker::Number.unique.between(from: 1, to: 100) }
     beat_type { ['action', 'dialogue'].sample }
     text { Faker::Lorem.paragraph }
