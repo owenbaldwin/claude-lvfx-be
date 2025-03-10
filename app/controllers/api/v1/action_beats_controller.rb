@@ -18,6 +18,9 @@ module Api
       # POST /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats
       def create
         @action_beat = @scene.action_beats.new(action_beat_params)
+        @action_beat.script = @script
+        @action_beat.production = @production
+        @action_beat.sequence = @sequence
         
         if @action_beat.save
           render json: @action_beat, status: :created
@@ -55,7 +58,7 @@ module Api
       end
       
       def action_beat_params
-        params.permit(:description, :order_number, :dialogue, :notes)
+        params.permit(:number, :type, :text, :description, :dialogue, :notes)
       end
     end
   end
