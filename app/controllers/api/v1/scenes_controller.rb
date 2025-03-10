@@ -4,20 +4,22 @@ module Api
       before_action :set_sequence
       before_action :set_scene, only: [:show, :update, :destroy]
       
-      # GET /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes
+      # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes
       def index
         @scenes = @sequence.scenes
         render json: @scenes, status: :ok
       end
       
-      # GET /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{id}
+      # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{id}
       def show
         render json: @scene, status: :ok
       end
       
-      # POST /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes
+      # POST /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes
       def create
         @scene = @sequence.scenes.new(scene_params)
+        @scene.script = @sequence.script
+        @scene.production = @production
         
         if @scene.save
           render json: @scene, status: :created
@@ -26,7 +28,7 @@ module Api
         end
       end
       
-      # PUT /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{id}
+      # PUT /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{id}
       def update
         if @scene.update(scene_params)
           render json: @scene, status: :ok
@@ -35,7 +37,7 @@ module Api
         end
       end
       
-      # DELETE /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{id}
+      # DELETE /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{id}
       def destroy
         @scene.destroy
         head :no_content
@@ -45,8 +47,7 @@ module Api
       
       def set_sequence
         @production = @current_user.productions.find(params[:production_id])
-        @script = @production.scripts.find(params[:script_id])
-        @sequence = @script.sequences.find(params[:sequence_id])
+        @sequence = @production.sequences.find(params[:sequence_id])
       end
       
       def set_scene
@@ -54,7 +55,7 @@ module Api
       end
       
       def scene_params
-        params.permit(:number, :name, :description, :setting, :time_of_day)
+        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id)
       end
     end
   end

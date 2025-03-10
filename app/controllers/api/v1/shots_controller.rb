@@ -4,20 +4,24 @@ module Api
       before_action :set_action_beat
       before_action :set_shot, only: [:show, :update, :destroy]
       
-      # GET /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
+      # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
       def index
         @shots = @action_beat.shots
         render json: @shots, status: :ok
       end
       
-      # GET /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
+      # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
       def show
         render json: @shot, status: :ok
       end
       
-      # POST /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
+      # POST /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
       def create
         @shot = @action_beat.shots.new(shot_params)
+        @shot.script = @action_beat.script
+        @shot.production = @production
+        @shot.scene = @scene
+        @shot.sequence = @sequence
         
         if @shot.save
           render json: @shot, status: :created
@@ -26,7 +30,7 @@ module Api
         end
       end
       
-      # PUT /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
+      # PUT /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
       def update
         if @shot.update(shot_params)
           render json: @shot, status: :ok
@@ -35,7 +39,7 @@ module Api
         end
       end
       
-      # DELETE /api/v1/productions/{production_id}/scripts/{script_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
+      # DELETE /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
       def destroy
         @shot.destroy
         head :no_content
@@ -45,8 +49,7 @@ module Api
       
       def set_action_beat
         @production = @current_user.productions.find(params[:production_id])
-        @script = @production.scripts.find(params[:script_id])
-        @sequence = @script.sequences.find(params[:sequence_id])
+        @sequence = @production.sequences.find(params[:sequence_id])
         @scene = @sequence.scenes.find(params[:scene_id])
         @action_beat = @scene.action_beats.find(params[:action_beat_id])
       end
@@ -56,7 +59,7 @@ module Api
       end
       
       def shot_params
-        params.permit(:number, :description, :camera_angle, :camera_movement, :status, :notes)
+        params.permit(:number, :description, :vfx, :duration, :camera_angle, :camera_movement, :status, :notes, :script_id)
       end
     end
   end
