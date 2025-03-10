@@ -7,7 +7,7 @@ class ActionBeat < ApplicationRecord
   
   validates :number, presence: true, numericality: { only_integer: true }
   validates :text, presence: true
-  validates :type, inclusion: { in: ['dialogue', 'action'] }
+  validates :beat_type, inclusion: { in: ['dialogue', 'action'] }
   
   # Ensure uniqueness of number within a scene
   validates :number, uniqueness: { scope: :scene_id, message: "must be unique within a scene" }
