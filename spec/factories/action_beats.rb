@@ -5,18 +5,18 @@ FactoryBot.define do
     script
     production
     number { Faker::Number.unique.between(from: 1, to: 100) }
-    type { ['action', 'dialogue'].sample }
+    beat_type { ['action', 'dialogue'].sample }
     text { Faker::Lorem.paragraph }
     description { Faker::Lorem.paragraph }
     
     trait :dialogue do
-      type { 'dialogue' }
+      beat_type { 'dialogue' }
       dialogue { Faker::Movies::StarWars.character.upcase }
       text { Faker::Movies::StarWars.quote }
     end
     
     trait :action do
-      type { 'action' }
+      beat_type { 'action' }
       text { Faker::Lorem.paragraph }
     end
   end
