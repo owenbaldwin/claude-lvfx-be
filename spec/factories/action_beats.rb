@@ -1,7 +1,7 @@
 FactoryBot.define do
   factory :action_beat do
     association :scene
-    association :sequence
+    association :sequence, factory: :sequence
     association :script
     association :production
     number { Faker::Number.unique.between(from: 1, to: 100) }
