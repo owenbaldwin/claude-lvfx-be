@@ -58,7 +58,7 @@ module Api
       end
       
       def action_beat_params
-        params.permit(:number, :type, :text, :description, :dialogue, :notes)
+        params.permit(:number, :beat_type, :text, :description, :dialogue, :notes)
       end
     end
   end
