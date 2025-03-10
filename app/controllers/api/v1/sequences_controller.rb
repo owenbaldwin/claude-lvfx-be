@@ -18,6 +18,7 @@ module Api
       # POST /api/v1/productions/{production_id}/scripts/{script_id}/sequences
       def create
         @sequence = @script.sequences.new(sequence_params)
+        @sequence.production = @production
         
         if @sequence.save
           render json: @sequence, status: :created
@@ -53,7 +54,7 @@ module Api
       end
       
       def sequence_params
-        params.permit(:number, :name, :description)
+        params.permit(:number, :prefix, :name, :description)
       end
     end
   end
