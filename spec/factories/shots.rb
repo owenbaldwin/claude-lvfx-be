@@ -1,10 +1,10 @@
 FactoryBot.define do
   factory :shot do
-    action_beat
-    scene
-    sequence
-    script
-    production
+    association :action_beat
+    association :scene
+    association :sequence
+    association :script
+    association :production
     number { Faker::Number.unique.between(from: 1, to: 100) }
     description { Faker::Lorem.paragraph }
     vfx { ['yes', 'no'].sample }
