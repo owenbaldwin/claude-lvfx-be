@@ -11,7 +11,7 @@ class UpdateActionBeats < ActiveRecord::Migration[7.0]
       t.rename :order_number, :number
       
       # Add the beat_type field to replace description
-      t.string :type, null: false, default: 'action'
+      t.string :beat_type, null: false, default: 'action'
       
       # Add text field (main content)
       t.string :text, null: false
