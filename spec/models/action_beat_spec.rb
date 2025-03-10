@@ -20,7 +20,7 @@ RSpec.describe ActionBeat, type: :model do
     it { should validate_presence_of(:number) }
     it { should validate_numericality_of(:number).only_integer }
     it { should validate_presence_of(:text) }
-    it { should validate_inclusion_of(:type).in_array(['dialogue', 'action']) }
+    it { should validate_inclusion_of(:beat_type).in_array(['dialogue', 'action']) }
     
     it "validates uniqueness of number within a scene" do
       create(:action_beat, scene: scene, sequence: sequence, script: script, production: production, number: 1)
@@ -39,7 +39,7 @@ RSpec.describe ActionBeat, type: :model do
         script: script, 
         production: production,
         number: 1,
-        type: "action",
+        beat_type: "action",
         text: "John walks into the room slowly",
         description: "Show tension in his movements"
       )
@@ -55,7 +55,7 @@ RSpec.describe ActionBeat, type: :model do
         script: script, 
         production: production,
         number: 2,
-        type: "dialogue",
+        beat_type: "dialogue",
         text: "I don't know what to do anymore.",
         dialogue: "JOHN"
       )
