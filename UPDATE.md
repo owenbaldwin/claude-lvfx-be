@@ -52,7 +52,27 @@ These migrations add all the necessary fields, foreign keys, and indexes for pro
 
 > **Important:** We named the action beat type field `beat_type` instead of `type` to avoid conflicts with Rails Single Table Inheritance (STI) which reserves the column name "type".
 
-## 3. Controller Updates
+## 3. Route Structure Simplification
+
+The URL structure has been simplified by removing script references from the route paths:
+
+**Original structure:**
+```
+/api/v1/productions/:production_id/scripts/:script_id/sequences/:sequence_id/...
+```
+
+**New simplified structure:**
+```
+/api/v1/productions/:production_id/sequences/:sequence_id/...
+```
+
+While scripts are no longer part of the URL, each content element (sequence, scene, action beat, shot) still maintains its `script_id` relationship in the database. Controllers have been updated to:
+
+1. Fetch the appropriate script from related models
+2. Allow `script_id` to be passed as a parameter when needed
+3. Maintain the same hierarchical data structure without requiring script specification in the URL
+
+## 4. Controller Updates
 
 Updated all controllers to support the new model structure:
 - Added proper relation handling
@@ -60,8 +80,9 @@ Updated all controllers to support the new model structure:
 - Maintained RESTful API design
 - Ensured proper authentication and authorization
 - Added error handling
+- Removed script dependency from URL parameters
 
-## 4. Testing
+## 5. Testing
 
 Added comprehensive test suite:
 - Model specs for all updated models
@@ -83,16 +104,17 @@ Added comprehensive test suite:
 
 ## API Endpoints
 
-The update maintains the existing nested RESTful routes structure:
+The update simplifies the API endpoint structure:
 
 ```
-GET    /api/v1/productions/:production_id/scripts/:script_id/sequences
-POST   /api/v1/productions/:production_id/scripts/:script_id/sequences
-GET    /api/v1/productions/:production_id/scripts/:script_id/sequences/:id
-PUT    /api/v1/productions/:production_id/scripts/:script_id/sequences/:id
-DELETE /api/v1/productions/:production_id/scripts/:script_id/sequences/:id
+GET    /api/v1/productions/:production_id/sequences
+POST   /api/v1/productions/:production_id/sequences
+GET    /api/v1/productions/:production_id/sequences/:id
+PUT    /api/v1/productions/:production_id/sequences/:id
+DELETE /api/v1/productions/:production_id/sequences/:id
 
-# ...and similar patterns for scenes, action_beats, and shots
+GET    /api/v1/productions/:production_id/sequences/:sequence_id/scenes
+# ...and similar patterns for nested scenes, action_beats, and shots
 ```
 
 All endpoints require authentication and proper permissions to access.
