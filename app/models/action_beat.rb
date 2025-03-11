@@ -1,7 +1,7 @@
 class ActionBeat < ApplicationRecord
   belongs_to :scene
   belongs_to :sequence
-  belongs_to :script
+  belongs_to :script, optional: true
   belongs_to :production
   has_many :shots, dependent: :destroy
   
