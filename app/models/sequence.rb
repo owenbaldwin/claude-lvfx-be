@@ -1,5 +1,5 @@
 class Sequence < ApplicationRecord
-  belongs_to :script
+  belongs_to :script, optional: true
   belongs_to :production
   has_many :scenes, dependent: :destroy
   has_many :action_beats, through: :scenes

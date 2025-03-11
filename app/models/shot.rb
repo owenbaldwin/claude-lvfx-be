@@ -2,7 +2,7 @@ class Shot < ApplicationRecord
   belongs_to :action_beat
   belongs_to :scene
   belongs_to :sequence
-  belongs_to :script
+  belongs_to :script, optional: true
   belongs_to :production
   
   validates :number, presence: true, numericality: { only_integer: true }
