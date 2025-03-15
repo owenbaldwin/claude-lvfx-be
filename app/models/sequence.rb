@@ -8,6 +8,7 @@ class Sequence < ApplicationRecord
   validates :number, presence: true, numericality: { only_integer: true }
   validates :name, presence: true
   
-  # Ensure uniqueness of number within a script
-  validates :number, uniqueness: { scope: :script_id, message: "must be unique within a script" }
+  # Ensure uniqueness of number within a production instead of script
+  # This allows sequences to be created without requiring a script
+  validates :number, uniqueness: { scope: :production_id, message: "must be unique within a production" }
 end
