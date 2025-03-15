@@ -17,21 +17,46 @@ module Api
       
       # POST /api/v1/productions/{production_id}/sequences
       def create
+        # Log the raw parameters for debugging
+        Rails.logger.info("Raw Parameters: #{params.inspect}")
+        
         # Check if script_id was provided in the params, otherwise use the first script if available
-        if params[:script_id].present?
-          @script = @production.scripts.find_by(id: params[:script_id])
+        script_id = params[:script_id] || (params[:sequence] && params[:sequence][:script_id])
+        
+        if script_id.present?
+          @script = @production.scripts.find_by(id: script_id)
         else
           @script = @production.scripts.first
         end
         
         # Create the new sequence with the production association
-        @sequence = @production.sequences.new(sequence_params)
+        @sequence = @production.sequences.new
+        
+        # Manually set attributes from params instead of using strong parameters
+        # to handle both nested and non-nested formats
+        if params[:sequence].present?
+          # Nested params format
+          @sequence.name = params[:sequence][:name]
+          @sequence.number = params[:sequence][:number]
+          @sequence.prefix = params[:sequence][:prefix]
+          @sequence.description = params[:sequence][:description]
+        else
+          # Non-nested params format
+          @sequence.name = params[:name]
+          @sequence.number = params[:number]
+          @sequence.prefix = params[:prefix]
+          @sequence.description = params[:description]
+        end
+        
+        # Set default values if not provided
+        @sequence.name ||= "New Sequence"
+        @sequence.number ||= next_available_sequence_number
         
         # Set the script if available
         @sequence.script = @script if @script.present?
         
         # Log parameters to help with debugging
-        Rails.logger.info("Creating sequence with params: #{sequence_params.inspect}")
+        Rails.logger.info("Creating sequence with attributes: #{@sequence.attributes.inspect}")
         Rails.logger.info("Production: #{@production.inspect}")
         Rails.logger.info("Script: #{@script.inspect}")
         
@@ -46,7 +71,13 @@ module Api
       
       # PUT /api/v1/productions/{production_id}/sequences/{id}
       def update
-        if @sequence.update(sequence_params)
+        if params[:sequence].present?
+          update_params = sequence_params
+        else
+          update_params = params.permit(:number, :prefix, :name, :description, :script_id)
+        end
+        
+        if @sequence.update(update_params)
           render json: @sequence, status: :ok
         else
           render json: { errors: @sequence.errors.full_messages }, status: :unprocessable_entity
@@ -70,8 +101,13 @@ module Api
       end
       
       def sequence_params
-        # Allow script_id to be passed as a parameter if needed
         params.require(:sequence).permit(:number, :prefix, :name, :description, :script_id)
+      end
+      
+      def next_available_sequence_number
+        # Find the highest existing sequence number and add 1
+        highest = @production.sequences.maximum(:number) || 0
+        highest + 1
       end
     end
   end
