@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_03_11_191451) do
+ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -94,8 +94,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_11_191451) do
     t.bigint "production_id", null: false
     t.integer "number", null: false
     t.string "prefix"
+    t.index ["production_id", "number"], name: "index_sequences_on_production_id_and_number", unique: true
     t.index ["production_id"], name: "index_sequences_on_production_id"
-    t.index ["script_id", "number"], name: "index_sequences_on_script_id_and_number", unique: true
     t.index ["script_id"], name: "index_sequences_on_script_id"
   end
 
