@@ -4,11 +4,25 @@ class Sequence < ApplicationRecord
   has_many :scenes, dependent: :destroy
   has_many :action_beats, through: :scenes
   has_many :shots, through: :action_beats
-  
+
   validates :number, presence: true, numericality: { only_integer: true }
   validates :name, presence: true
-  
-  # Ensure uniqueness of number within a production instead of script
-  # This allows sequences to be created without requiring a script
+
   validates :number, uniqueness: { scope: :production_id, message: "must be unique within a production" }
+
+  # before_save :reorder_sequences
+  after_save :reorder_sequences
+
+
+  private
+
+  # Ensure sequence numbers remain contiguous and ordered
+  def reorder_sequences
+    return unless number_changed?
+
+    sequences = production.sequences.order(:number)
+    sequences.each_with_index do |seq, index|
+      seq.update_column(:number, index + 1) unless seq.number == index + 1
+    end
+  end
 end
