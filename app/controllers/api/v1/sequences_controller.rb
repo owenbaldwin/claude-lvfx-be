@@ -7,12 +7,12 @@ module Api
       # GET /api/v1/productions/{production_id}/sequences
       def index
         @sequences = @production.sequences.order(:number)
-        render json: @sequences, status: :ok
+        render json: @sequences.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
       end
 
       # GET /api/v1/productions/{production_id}/sequences/{id}
       def show
-        render json: @sequence, status: :ok
+        render json: @sequence.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
       end
 
       # POST /api/v1/productions/{production_id}/sequences
@@ -32,12 +32,9 @@ module Api
                       .each { |seq| seq.update_column(:number, seq.number + 1) }
           end
 
-          @sequence = @production.sequences.new(
-            name:        params[:name],
-            description: params[:description],
-            number:      insert_position,
-            production_id: @production.id
-          )
+
+          @sequence = @production.sequences.new(sequence_params.merge(number: insert_position, production_id: @production.id))
+
 
           if @sequence.save
             render json: @sequence, status: :created
