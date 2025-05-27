@@ -7,7 +7,10 @@ class SceneSerializer < ActiveModel::Serializer
              :location,
              :day_night,
              :length,
-             :created_at
+             :created_at,
+             :version_number,
+             :is_active,
+             :source_scene_id
 
   belongs_to :sequence
   has_many :action_beats

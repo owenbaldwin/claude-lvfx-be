@@ -6,7 +6,8 @@ module Api
 
       # GET /api/v1/productions/{production_id}/sequences
       def index
-        @sequences = @production.sequences.order(:number)
+        # @sequences = @production.sequences.order(:number)
+        @sequences = @production.sequences.active_versions.order(:number)
         render json: @sequences.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
       end
 
@@ -78,7 +79,8 @@ module Api
       end
 
       def sequence_params
-        params.require(:sequence).permit(:number, :prefix, :name, :description, :script_id)
+        # params.require(:sequence).permit(:number, :prefix, :name, :description, :script_id)
+        params.require(:sequence).permit(:number, :prefix, :name, :description, :script_id, :is_active)
       end
 
       def next_available_sequence_number

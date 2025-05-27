@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_27_200857) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -27,8 +27,11 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.bigint "sequence_id", null: false
     t.string "beat_type", default: "action", null: false
     t.string "text", null: false
+    t.boolean "is_active", default: false
+    t.integer "version_number"
+    t.bigint "source_beat_id"
+    t.index ["production_id", "scene_id", "number", "version_number"], name: "idx_on_production_id_scene_id_number_version_number_a81d17a7b0"
     t.index ["production_id"], name: "index_action_beats_on_production_id"
-    t.index ["scene_id", "number"], name: "index_action_beats_on_scene_id_and_number", unique: true
     t.index ["scene_id"], name: "index_action_beats_on_scene_id"
     t.index ["script_id"], name: "index_action_beats_on_script_id"
     t.index ["sequence_id"], name: "index_action_beats_on_sequence_id"
@@ -68,9 +71,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.integer "number", null: false
     t.string "int_ext", default: "interior", null: false
     t.string "length"
+    t.boolean "is_active", default: false
+    t.integer "version_number"
+    t.bigint "source_scene_id"
+    t.index ["production_id", "number", "version_number"], name: "index_scenes_on_production_id_and_number_and_version_number"
     t.index ["production_id"], name: "index_scenes_on_production_id"
     t.index ["script_id"], name: "index_scenes_on_script_id"
-    t.index ["sequence_id", "number"], name: "index_scenes_on_sequence_id_and_number", unique: true
     t.index ["sequence_id"], name: "index_scenes_on_sequence_id"
   end
 
@@ -78,10 +84,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.bigint "production_id", null: false
     t.string "title", null: false
     t.text "description"
-    t.string "version"
+    t.integer "version_number"
     t.date "date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "previous_script_id"
+    t.string "color"
     t.index ["production_id"], name: "index_scripts_on_production_id"
   end
 
@@ -94,7 +102,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.bigint "production_id", null: false
     t.integer "number", null: false
     t.string "prefix"
-    t.index ["production_id", "number"], name: "index_sequences_on_production_id_and_number", unique: true
+    t.integer "version_number"
+    t.bigint "source_sequence_id"
+    t.index ["production_id", "number", "version_number"], name: "index_sequences_on_production_id_and_number_and_version_number"
     t.index ["production_id"], name: "index_sequences_on_production_id"
     t.index ["script_id"], name: "index_sequences_on_script_id"
   end
@@ -115,8 +125,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.integer "number", null: false
     t.string "vfx", default: "no", null: false
     t.time "duration"
-    t.index ["action_beat_id", "number"], name: "index_shots_on_action_beat_id_and_number", unique: true
+    t.integer "version_number"
+    t.bigint "source_shot_id"
     t.index ["action_beat_id"], name: "index_shots_on_action_beat_id"
+    t.index ["production_id", "scene_id", "number", "version_number"], name: "idx_on_production_id_scene_id_number_version_number_6cd32e9257"
     t.index ["production_id"], name: "index_shots_on_production_id"
     t.index ["scene_id"], name: "index_shots_on_scene_id"
     t.index ["script_id"], name: "index_shots_on_script_id"
@@ -134,6 +146,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "action_beats", "action_beats", column: "source_beat_id"
   add_foreign_key "action_beats", "productions"
   add_foreign_key "action_beats", "scenes"
   add_foreign_key "action_beats", "scripts"
@@ -141,14 +154,18 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_15_142100) do
   add_foreign_key "production_users", "productions"
   add_foreign_key "production_users", "users"
   add_foreign_key "scenes", "productions"
+  add_foreign_key "scenes", "scenes", column: "source_scene_id"
   add_foreign_key "scenes", "scripts"
   add_foreign_key "scenes", "sequences"
   add_foreign_key "scripts", "productions"
+  add_foreign_key "scripts", "scripts", column: "previous_script_id"
   add_foreign_key "sequences", "productions"
   add_foreign_key "sequences", "scripts"
+  add_foreign_key "sequences", "sequences", column: "source_sequence_id"
   add_foreign_key "shots", "action_beats"
   add_foreign_key "shots", "productions"
   add_foreign_key "shots", "scenes"
   add_foreign_key "shots", "scripts"
   add_foreign_key "shots", "sequences"
+  add_foreign_key "shots", "shots", column: "source_shot_id"
 end
