@@ -7,7 +7,13 @@ module Api
       # GET /api/v1/productions/{production_id}/sequences
       def index
         # @sequences = @production.sequences.order(:number)
-        @sequences = @production.sequences.active_versions.order(:number)
+        @sequences = if params[:script_id].present?
+                       @production.sequences
+                                  .where(script_id: params[:script_id])
+                                  .order(:number, :version_number)
+                     else
+                       @production.sequences.active_versions.order(:number)
+                     end
         render json: @sequences.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
       end
 

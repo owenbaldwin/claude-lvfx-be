@@ -8,7 +8,8 @@ class ShotSerializer < ActiveModel::Serializer
              :notes,
              :created_at,
              :version_number,
-             :source_shot_id
+             :source_shot_id,
+             :is_active
 
   belongs_to :action_beat
 end
