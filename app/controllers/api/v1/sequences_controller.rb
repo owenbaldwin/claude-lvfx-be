@@ -7,14 +7,22 @@ module Api
       # GET /api/v1/productions/{production_id}/sequences
       def index
         # @sequences = @production.sequences.order(:number)
-        @sequences = if params[:script_id].present?
-                       @production.sequences
+        if params[:script_id].present?
+          # Script-driven mode
+          @sequences = @production.sequences
                                   .where(script_id: params[:script_id])
                                   .order(:number, :version_number)
-                     else
-                       @production.sequences.active_versions.order(:number)
-                     end
-        render json: @sequences.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
+        else
+          # Manual-entry mode: pick latest version per sequence number
+          @sequences = @production.sequences
+                                  .select('DISTINCT ON(sequences.number) sequences.*')
+                                  .order('sequences.number ASC, sequences.version_number DESC')
+        end
+
+        render json: @sequences,
+              status: :ok,
+              each_serializer: SequenceSerializer
+        # render json: @sequences.as_json(only: [:id, :number, :prefix, :name, :description, :script_id, :production_id]), status: :ok
       end
 
       # GET /api/v1/productions/{production_id}/sequences/{id}

@@ -10,7 +10,10 @@ class SceneSerializer < ActiveModel::Serializer
              :created_at,
              :version_number,
              :is_active,
-             :source_scene_id
+             :source_scene_id,
+             :production_id,
+             :script_id,
+             :sequence_id
 
   belongs_to :sequence
   has_many :action_beats

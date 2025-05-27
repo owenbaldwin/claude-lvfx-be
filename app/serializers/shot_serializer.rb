@@ -9,7 +9,12 @@ class ShotSerializer < ActiveModel::Serializer
              :created_at,
              :version_number,
              :source_shot_id,
-             :is_active
+             :is_active,
+             :production_id,
+             :script_id,
+             :action_beat_id,
+             :scene_id,
+             :sequence_id
 
   belongs_to :action_beat
 end

@@ -12,9 +12,13 @@ module Api
                             .where(script_id: params[:script_id])
                             .order(:number, :version_number)
         else
-          @scenes = @sequence.scenes.active_versions.order(:number)
+          @scenes = @sequence.scenes
+                            .select('DISTINCT ON(scenes.number) scenes.*')
+                            .order('scenes.number ASC, scenes.version_number DESC')
         end
-        render json: @scenes, status: :ok
+
+        render json: @scenes, status: :ok, each_serializer: SceneSerializer
+        # render json: @scenes, status: :ok
       end
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{id}
