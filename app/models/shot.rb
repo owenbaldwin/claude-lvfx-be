@@ -23,6 +23,7 @@ class Shot < ApplicationRecord
   validates :vfx,             inclusion: { in: %w[yes no] }
   validates :camera_angle,    presence: true, allow_blank: true
   validates :camera_movement, presence: true, allow_blank: true
+  validates :color,           optional: true
 
   before_validation :set_versioning_fields
 

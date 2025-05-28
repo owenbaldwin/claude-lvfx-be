@@ -18,7 +18,7 @@ class Sequence < ApplicationRecord
   validates :number, presence: true, numericality: { only_integer: true }
   validates :number, uniqueness: { scope: :production_id }
   validates :name,   presence: true
-
+  validates :color, optional: true
   before_validation :set_versioning_fields
 
   private

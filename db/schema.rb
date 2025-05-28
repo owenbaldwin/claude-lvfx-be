@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_27_202911) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_28_180913) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -30,6 +30,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_27_202911) do
     t.boolean "is_active", default: false
     t.integer "version_number"
     t.bigint "source_beat_id"
+    t.string "color"
     t.index ["production_id", "scene_id", "number", "version_number"], name: "idx_on_production_id_scene_id_number_version_number_a81d17a7b0"
     t.index ["production_id"], name: "index_action_beats_on_production_id"
     t.index ["scene_id"], name: "index_action_beats_on_scene_id"
@@ -74,6 +75,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_27_202911) do
     t.boolean "is_active", default: false
     t.integer "version_number"
     t.bigint "source_scene_id"
+    t.string "color"
     t.index ["production_id", "number", "version_number"], name: "index_scenes_on_production_id_and_number_and_version_number"
     t.index ["production_id"], name: "index_scenes_on_production_id"
     t.index ["script_id"], name: "index_scenes_on_script_id"
@@ -105,6 +107,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_27_202911) do
     t.integer "version_number"
     t.bigint "source_sequence_id"
     t.boolean "is_active", default: false
+    t.string "color"
     t.index ["production_id", "number", "version_number"], name: "index_sequences_on_production_id_and_number_and_version_number"
     t.index ["production_id"], name: "index_sequences_on_production_id"
     t.index ["script_id"], name: "index_sequences_on_script_id"
@@ -129,6 +132,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_27_202911) do
     t.integer "version_number"
     t.bigint "source_shot_id"
     t.boolean "is_active", default: false
+    t.string "color"
     t.index ["action_beat_id"], name: "index_shots_on_action_beat_id"
     t.index ["production_id", "scene_id", "number", "version_number"], name: "idx_on_production_id_scene_id_number_version_number_6cd32e9257"
     t.index ["production_id"], name: "index_shots_on_production_id"

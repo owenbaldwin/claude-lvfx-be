@@ -14,7 +14,8 @@ class ShotSerializer < ActiveModel::Serializer
              :script_id,
              :action_beat_id,
              :scene_id,
-             :sequence_id
+             :sequence_id,
+             :color
 
   belongs_to :action_beat
 end
