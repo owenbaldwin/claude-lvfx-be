@@ -22,7 +22,9 @@ class ActionBeat < ApplicationRecord
   validates :number, uniqueness: { scope: :scene_id }
   validates :text,   presence: true
   validates :beat_type, inclusion: { in: %w[action dialogue] }
-  validates :color,     optional: true
+  validates :color,
+            length: { maximum: 30 },
+            allow_blank: true
 
   before_validation :set_versioning_fields
 

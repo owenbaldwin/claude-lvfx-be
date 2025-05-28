@@ -24,9 +24,13 @@ class Scene < ApplicationRecord
   validates :location,  presence: true
   validates :int_ext,   inclusion: { in: %w[interior exterior] }
   validates :day_night, presence: true
-  validates :color, optional: true
+  validates :color,
+            length: { maximum: 30 },
+            allow_blank: true
 
   before_validation :set_versioning_fields
+
+  before_create :bump_version_and_link_previous
 
   private
 
@@ -44,5 +48,29 @@ class Scene < ApplicationRecord
                   .maximum(:version_number) || 0
       self.version_number ||= max + 1
     end
+  end
+
+
+  def bump_version_and_link_previous
+    # find all prior versions of this scene number, in this production
+    prior = Scene
+      .where(production_id: production_id, number: number)
+      .order(version_number: :desc)
+      .first
+
+    if prior
+      # 1) bump version
+      self.version_number = prior.version_number + 1
+      # 2) link back to it
+      self.source_scene_id = prior.id
+      # 3) deactivate it
+      prior.update_columns(is_active: false)
+    else
+      # first-ever version
+      self.version_number = 1
+    end
+
+    # ensure the new one is active
+    self.is_active = true
   end
 end
