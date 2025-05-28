@@ -9,7 +9,8 @@ class SequenceSerializer < ActiveModel::Serializer
              :source_sequence_id,
              :is_active,
              :production_id,
-             :script_id
+             :script_id,
+             :color
   belongs_to :script
   has_many :scenes
 end

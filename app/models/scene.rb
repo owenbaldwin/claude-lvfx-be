@@ -24,6 +24,7 @@ class Scene < ApplicationRecord
   validates :location,  presence: true
   validates :int_ext,   inclusion: { in: %w[interior exterior] }
   validates :day_night, presence: true
+  validates :color, optional: true
 
   before_validation :set_versioning_fields
 

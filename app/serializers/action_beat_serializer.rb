@@ -13,7 +13,8 @@ class ActionBeatSerializer < ActiveModel::Serializer
              :production_id,
              :script_id,
              :scene_id,
-             :sequence_id
+             :sequence_id,
+             :color
 
   belongs_to :scene
   has_many :shots
