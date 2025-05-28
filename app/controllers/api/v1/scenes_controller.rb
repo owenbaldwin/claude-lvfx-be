@@ -19,9 +19,12 @@ module Api
                             .order(:number, :version_number)
         else
           # Manual-entry / latest-only mode
+          # @scenes = @sequence.scenes
+          #                   .select('DISTINCT ON(scenes.number) scenes.*')
+          #                   .order('scenes.number ASC, scenes.version_number DESC')
           @scenes = @sequence.scenes
-                            .select('DISTINCT ON(scenes.number) scenes.*')
-                            .order('scenes.number ASC, scenes.version_number DESC')
+                      .where(is_active: true)
+                      .order(:number)
         end
 
         render json: @scenes, status: :ok, each_serializer: SceneSerializer
