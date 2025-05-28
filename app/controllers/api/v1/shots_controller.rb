@@ -6,8 +6,19 @@ module Api
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
       def index
-        @shots = @action_beat.shots
-        render json: @shots, status: :ok
+        # @shots = @action_beat.shots
+        if params[:script_id].present?
+          @shots = @action_beat.shots
+                              .where(script_id: params[:script_id])
+                              .order(:number, :version_number)
+        else
+          @shots = @action_beat.shots
+                              .select('DISTINCT ON(shots.number) shots.*')
+                              .order('shots.number ASC, shots.version_number DESC')
+        end
+
+        render json: @shots, status: :ok, each_serializer: ShotSerializer
+        # render json: @shots, status: :ok
       end
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots/{id}
@@ -59,7 +70,8 @@ module Api
       end
 
       def shot_params
-        params.permit(:number, :description, :vfx, :duration, :camera_angle, :camera_movement, :status, :notes, :script_id)
+        # params.permit(:number, :description, :vfx, :duration, :camera_angle, :camera_movement, :status, :notes, :script_id)
+        params.permit(:number, :description, :vfx, :duration, :camera_angle,:camera_movement, :status, :notes, :script_id, :is_active)
       end
     end
   end
