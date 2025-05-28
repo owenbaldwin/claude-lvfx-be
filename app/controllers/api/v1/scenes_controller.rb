@@ -7,11 +7,18 @@ module Api
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes
       def index
         # @scenes = @sequence.scenes
-        if params[:script_id].present?
+        if params[:all_versions].present? && params[:scene_number].present?
+          # Return *all* versions of a single scene (for the dropdown)
+          @scenes = @sequence.scenes
+                            .where(number: params[:scene_number])
+                            .order(:version_number)
+        elsif params[:script_id].present?
+          # Script-driven mode
           @scenes = @sequence.scenes
                             .where(script_id: params[:script_id])
                             .order(:number, :version_number)
         else
+          # Manual-entry / latest-only mode
           @scenes = @sequence.scenes
                             .select('DISTINCT ON(scenes.number) scenes.*')
                             .order('scenes.number ASC, scenes.version_number DESC')
@@ -67,7 +74,7 @@ module Api
 
       def scene_params
         # params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id)
-        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active)
+        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active, :version_number,)
       end
     end
   end

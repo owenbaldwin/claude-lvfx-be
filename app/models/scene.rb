@@ -17,7 +17,10 @@ class Scene < ApplicationRecord
   has_many   :action_beats, dependent: :destroy
 
   validates :number,    presence: true, numericality: { only_integer: true }
-  validates :number,    uniqueness: { scope: :sequence_id }
+  # validates :number,    uniqueness: { scope: :sequence_id }
+  validates :number,
+          uniqueness: { scope: [:production_id, :version_number],
+                        message: "has already been taken for this version" }
   validates :location,  presence: true
   validates :int_ext,   inclusion: { in: %w[interior exterior] }
   validates :day_night, presence: true
