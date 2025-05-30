@@ -5,9 +5,10 @@ class Script < ApplicationRecord
   has_many   :action_beats, through: :scenes
   has_many   :shots,        through: :action_beats
 
-  validates :title, presence: true
 
   before_validation :assign_version_and_previous
+
+  has_one_attached :file
 
   private
 
