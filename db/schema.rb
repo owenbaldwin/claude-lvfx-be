@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_30_175801) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_30_192741) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -64,6 +64,29 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_30_175801) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "character_appearances", force: :cascade do |t|
+    t.bigint "character_id", null: false
+    t.bigint "scene_id"
+    t.bigint "action_beat_id"
+    t.bigint "shot_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action_beat_id"], name: "index_character_appearances_on_action_beat_id"
+    t.index ["character_id"], name: "index_character_appearances_on_character_id"
+    t.index ["scene_id"], name: "index_character_appearances_on_scene_id"
+    t.index ["shot_id"], name: "index_character_appearances_on_shot_id"
+  end
+
+  create_table "characters", force: :cascade do |t|
+    t.string "full_name"
+    t.text "description"
+    t.string "actor"
+    t.bigint "production_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["production_id"], name: "index_characters_on_production_id"
   end
 
   create_table "production_users", force: :cascade do |t|
@@ -187,6 +210,11 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_30_175801) do
   add_foreign_key "action_beats", "sequences"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "character_appearances", "action_beats"
+  add_foreign_key "character_appearances", "characters"
+  add_foreign_key "character_appearances", "scenes"
+  add_foreign_key "character_appearances", "shots"
+  add_foreign_key "characters", "productions"
   add_foreign_key "production_users", "productions"
   add_foreign_key "production_users", "users"
   add_foreign_key "scenes", "productions"

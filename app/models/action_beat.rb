@@ -17,7 +17,7 @@ class ActionBeat < ApplicationRecord
   belongs_to :production
 
   has_many   :shots, dependent: :destroy
-
+  has_many   :character_appearances, dependent: :nullify
   validates :number, presence: true, numericality: { only_integer: true }
   validates :number,
           uniqueness: { scope: [:scene_id, :version_number],
