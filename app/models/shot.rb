@@ -16,6 +16,7 @@ class Shot < ApplicationRecord
   belongs_to :sequence
   belongs_to :script,   optional: true
   belongs_to :production
+  has_many   :character_appearances, dependent: :nullify
 
   validates :number,          presence: true, numericality: { only_integer: true }
   validates :number,          uniqueness: { scope: :action_beat_id }
