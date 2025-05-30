@@ -77,7 +77,7 @@ module Api
 
       def scene_params
         # params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id)
-        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active, :version_number,)
+        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active, :version_number, :source_scene_id, :color)
       end
     end
   end
