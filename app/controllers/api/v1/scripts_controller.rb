@@ -53,7 +53,7 @@ module Api
 
       def script_params
         # params.permit(:title, :description, :version, :date)
-        params.permit(:title, :description, :version_number, :date, :color)
+        params.permit(:title, :description, :version_number, :date, :color, :file)
       end
     end
   end
