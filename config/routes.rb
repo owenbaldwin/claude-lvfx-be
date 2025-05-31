@@ -11,10 +11,12 @@ Rails.application.routes.draw do
       # Production routes with nested resources
       resources :productions do
         resources :users, controller: 'production_users', only: [:index, :create, :destroy]
-        
+
         # Scripts routes
-        resources :scripts
-        
+        resources :scripts, only: [:index, :show, :create] do
+          post :parse, on: :member
+        end
+
         # Content structure routes - directly under productions
         resources :sequences do
           resources :scenes do

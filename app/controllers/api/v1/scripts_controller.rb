@@ -26,6 +26,14 @@ module Api
         end
       end
 
+      # POST /api/v1/productions/:production_id/scripts/:id/parse
+      def parse
+        script = Script.find(params[:id])
+        # enqueue the parsing job
+        ParseScriptJob.perform_later(params[:production_id], script.id)
+        render json: { status: 'queued' }, status: :accepted
+      end
+
       # PUT /api/v1/productions/{production_id}/scripts/{id}
       def update
         if @script.update(script_params)
