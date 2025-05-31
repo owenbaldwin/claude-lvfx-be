@@ -10,6 +10,8 @@ class Script < ApplicationRecord
 
   has_one_attached :file
 
+  validates :file, attached: true, content_type: 'application/pdf'
+
   private
 
   def assign_version_and_previous
