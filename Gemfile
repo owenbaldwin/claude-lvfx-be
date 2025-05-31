@@ -53,6 +53,11 @@ gem "ruby-openai", "~> 3.7"
 
 gem 'active_storage_validations'
 
+gem "sidekiq"
+
+# gem "multipart-post"
+gem "multipart-post", ">= 2.1"
+
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
