@@ -57,7 +57,11 @@ Rails.application.configure do
   config.active_job.verbose_enqueue_logs = true
 
   # Use inline adapter for development - ADDED
-  config.active_job.queue_adapter = :inline
+  # config.active_job.queue_adapter = :inline
+  # config.active_job.queue_adapter = :sidekiq
+  config.active_job.queue_adapter = :async
+
+
 
 
   # Raises error for missing translations.
