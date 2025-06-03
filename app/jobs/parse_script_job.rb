@@ -185,21 +185,38 @@ class ParseScriptJob < ApplicationJob
         2) A "start from" slugline that exactly marks the beginning of Scene #{index}.
         3) An "until" slugline that exactly marks the beginning of the next scene (i.e. the stop marker).
 
-        Your job is to extract **only** the contents belonging to Scene #{index}. Treat everything after "#{start_slug}"
+        Your job is to extract **only** the contents belonging to Scene #{index}. Treat everything from "#{start_slug}"
         up until—but not including—the line "#{until_slug}" as the entire scene text.
 
         You must return exactly **one JSON object** (no extra text, no markdown fences). Fields:
 
-          • "index": #{index}
-          • "scene_number": the printed scene number exactly as in "#{start_slug}" (e.g. "1", "3A", "10B")
-          • "location": the location string exactly as it appears after "INT." or "EXT." or "INT./EXT." in "#{start_slug}"
-          • "time_of_day": the time‐of‐day string exactly as in "#{start_slug}" (the word after the "–" if present)
-          • "characters": an array of all character names who have dialogue in this scene (uppercase, exactly as they appear)
-          • "actions": an array of strings—every line of action/descriptive text, in order, excluding sluglines or dialogue lines
-          • "dialogues": an array of objects; each object:
-              { "character": "<CHAR_NAME>", "line": "<FULL DIALOGUE LINE>" }
-            in the order they appear. If a character has multiple lines in a row, each line is its own entry.
-            Preserve any parentheticals (e.g. `(whispering)`) in the "line".
+        {
+          "scene_index": #{index},
+          "scene_number": <number>,
+          "int_ext": "INT. or EXT.",
+          "location": "scene location",
+          "time": "scene time of day",
+          "extra": "extra information about the scene like CONT'D etc if present",
+          "description": "brief description of the scene",
+          "characters": [
+            "character name 1",
+            "character name 2"
+          ],
+          "action_beats": [
+            {
+              "type": "action or dialogue",
+              "characters": [
+                "character name 1",
+                "character name 2"
+              ],
+              "indications": "(e.g., O.S., V.O.) if applicable",
+              "content": "text of the action or dialogue"
+            }
+            // …more beats…
+          ]
+        }
+
+
 
         RULES:
         • Preserve original casing/spaces. Do not alter or strip anything.
@@ -207,6 +224,7 @@ class ParseScriptJob < ApplicationJob
         • If the scene has no dialogue, return "dialogues": [] and still list characters: [].
         • If the scene has no action, return "actions": [].
         • The JSON must parse as valid JSON. Do not output any commentary.
+        • Preserve any parentheticals (e.g. `(whispering)`) in the "line".
 
         ======
         SCENE TEXT:
