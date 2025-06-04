@@ -1,8 +1,10 @@
 module Api
   module V1
     class ActionBeatsController < ApplicationController
-      before_action :set_scene
+      before_action :set_scene, except: [:update_unsequenced]
       before_action :set_action_beat, only: [:show, :update, :destroy]
+      before_action :set_production_and_scene_for_unsequenced, only: [:update_unsequenced]
+      before_action :set_unsequenced_action_beat, only: [:update_unsequenced]
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats
       def index
@@ -59,6 +61,21 @@ module Api
         end
       end
 
+      # PUT /api/v1/productions/{production_id}/scenes/{scene_id}/action_beats/{id}/update_unsequenced
+      def update_unsequenced
+        Rails.logger.debug "Received params: #{params.inspect}"
+        Rails.logger.debug "Action beat params: #{action_beat_params.inspect}"
+        Rails.logger.debug "Action beat before update: scene_id=#{@action_beat.scene_id}, id=#{@action_beat.id}"
+
+        if @action_beat.update(action_beat_params)
+          Rails.logger.debug "Action beat after update: scene_id=#{@action_beat.scene_id}, id=#{@action_beat.id}"
+          render json: @action_beat, status: :ok
+        else
+          Rails.logger.debug "Update failed: #{@action_beat.errors.full_messages}"
+          render json: { errors: @action_beat.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
       # DELETE /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{id}
       def destroy
         @action_beat.destroy
@@ -73,13 +90,30 @@ module Api
         @scene = @sequence.scenes.find(params[:scene_id])
       end
 
+      def set_production_and_scene_for_unsequenced
+        @production = @current_user.productions.find(params[:production_id])
+        @scene = @production.scenes.find(params[:scene_id])
+      end
+
       def set_action_beat
+        @action_beat = @scene.action_beats.find(params[:id])
+      end
+
+      def set_unsequenced_action_beat
         @action_beat = @scene.action_beats.find(params[:id])
       end
 
       def action_beat_params
         # params.permit(:number, :beat_type, :text, :description, :dialogue, :notes, :script_id)
-        params.permit(:number, :beat_type, :text, :description, :dialogue, :notes, :script_id, :is_active, :version_number, :source_beat_id, :color)
+        permitted_params = params.permit(:number, :beat_type, :text, :description, :dialogue, :notes, :script_id, :is_active, :version_number, :source_beat_id, :color, :scene_id, :production_id, :sequence_id)
+
+        # Handle camelCase conversion for update_unsequenced
+        if action_name == 'update_unsequenced'
+          permitted_params[:scene_id] = params[:sceneId] if params[:sceneId].present?
+          permitted_params[:sequence_id] = params[:sequenceId] if params[:sequenceId].present?
+        end
+
+        permitted_params
       end
     end
   end
