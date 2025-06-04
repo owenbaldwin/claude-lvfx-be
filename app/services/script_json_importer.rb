@@ -51,8 +51,25 @@ class ScriptJsonImporter
   end
 
   def create_scene_from_json(scene_hash)
+
+    # 1) Skip any “error” entries
+    if scene_hash["error"].present?
+      Rails.logger.warn "[ScriptJsonImporter] skipping scene index #{scene_hash['index']} (parsing_failed_or_missing)"
+      return nil
+    end
+
+    # 2) Guard against missing scene_number
+    raw_number = scene_hash["scene_number"]
+    unless raw_number
+      Rails.logger.error(
+        "[ScriptJsonImporter] scene JSON missing scene_number: #{scene_hash.inspect}"
+      )
+      return nil
+    end
+
     # Extract fields (JSON keys are strings):
-    scene_number = scene_hash.fetch("scene_number").to_i
+    scene_number = raw_number.to_i
+    # scene_number = scene_hash.fetch("scene_number").to_i
     raw_int_ext  = scene_hash.fetch("int_ext").strip       # e.g. "INT." or "EXT."
     location     = scene_hash.fetch("location").strip
     time_of_day  = scene_hash.fetch("time").strip          # e.g. "DAY", "NIGHT"

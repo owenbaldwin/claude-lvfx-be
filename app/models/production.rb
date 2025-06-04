@@ -4,8 +4,9 @@ class Production < ApplicationRecord
   has_many :scripts, dependent: :destroy
   has_many :sequences, dependent: :destroy
   has_many :scenes, dependent: :destroy
+  has_many :scenes_through_seq,  through: :sequences, source: :scenes
   has_many :action_beats, dependent: :destroy
   has_many :shots, dependent: :destroy
-  
+
   validates :title, presence: true
 end

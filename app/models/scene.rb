@@ -11,7 +11,7 @@ class Scene < ApplicationRecord
       )
   }
 
-  belongs_to :sequence
+  belongs_to :sequence, optional: true
   belongs_to :script,   optional: true
   belongs_to :production
   has_many   :action_beats, dependent: :destroy
