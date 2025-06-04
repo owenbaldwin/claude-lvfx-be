@@ -12,6 +12,10 @@ Rails.application.routes.draw do
       resources :productions do
         resources :users, controller: 'production_users', only: [:index, :create, :destroy]
 
+        resources :characters,           only: [:index, :show, :create, :update, :destroy]
+        resources :character_appearances, only: [:index, :show, :create, :update, :destroy]
+
+
         # Scripts routes
         resources :scripts, only: [:index, :show, :create] do
           post :parse, on: :member
