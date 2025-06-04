@@ -17,6 +17,7 @@ Rails.application.routes.draw do
 
         # Unsequenced scenes route
         get 'scenes/unsequenced', to: 'scenes#unsequenced'
+        put 'scenes/:id/update_unsequenced', to: 'scenes#update_unsequenced'
 
         # Scripts routes
         resources :scripts, only: [:index, :show, :create] do

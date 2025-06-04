@@ -1,9 +1,10 @@
 module Api
   module V1
     class ScenesController < ApplicationController
-      before_action :set_sequence, except: [:unsequenced]
+      before_action :set_sequence, except: [:unsequenced, :update_unsequenced]
       before_action :set_scene, only: [:show, :update, :destroy]
-      before_action :set_production_for_unsequenced, only: [:unsequenced]
+      before_action :set_production_for_unsequenced, only: [:unsequenced, :update_unsequenced]
+      before_action :set_unsequenced_scene, only: [:update_unsequenced]
 
       # GET /api/v1/productions/{production_id}/scenes/unsequenced
       def unsequenced
@@ -69,6 +70,21 @@ module Api
         end
       end
 
+      # PUT /api/v1/productions/{production_id}/scenes/{id}/update_unsequenced
+      def update_unsequenced
+        Rails.logger.debug "Received params: #{params.inspect}"
+        Rails.logger.debug "Scene params: #{scene_params.inspect}"
+        Rails.logger.debug "Scene before update: sequence_id=#{@scene.sequence_id}, id=#{@scene.id}"
+
+        if @scene.update(scene_params)
+          Rails.logger.debug "Scene after update: sequence_id=#{@scene.sequence_id}, id=#{@scene.id}"
+          render json: @scene, status: :ok
+        else
+          Rails.logger.debug "Update failed: #{@scene.errors.full_messages}"
+          render json: { errors: @scene.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
       # DELETE /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{id}
       def destroy
         @scene.destroy
@@ -90,9 +106,20 @@ module Api
         @scene = @sequence.scenes.find(params[:id])
       end
 
+      def set_unsequenced_scene
+        @scene = @production.scenes.find(params[:id])
+      end
+
       def scene_params
         # params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id)
-        params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active, :version_number, :source_scene_id, :color)
+        permitted_params = params.permit(:number, :int_ext, :location, :day_night, :length, :description, :script_id, :is_active, :version_number, :source_scene_id, :color, :sequence_id, :production_id)
+
+        # Handle camelCase conversion for update_unsequenced
+        if action_name == 'update_unsequenced' && params[:sequenceId].present?
+          permitted_params[:sequence_id] = params[:sequenceId]
+        end
+
+        permitted_params
       end
     end
   end
