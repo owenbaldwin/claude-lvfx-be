@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_30_192741) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_03_190734) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -143,6 +143,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_30_192741) do
     t.datetime "updated_at", null: false
     t.bigint "previous_script_id"
     t.string "color"
+    t.jsonb "scenes_data_json", default: {}
     t.index ["production_id"], name: "index_scripts_on_production_id"
   end
 

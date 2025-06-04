@@ -381,8 +381,20 @@ class ParseScriptJob < ApplicationJob
     final_payload = { "scenes" => final_array }
     Rails.logger.info "[ParseScriptJob] 🏁 Final combined scenes JSON for Script##{script_id}: #{JSON.pretty_generate(final_payload)}"
 
-    # Optionally save:
-    # script.update!(scenes_data_json: final_payload.to_json)
+    # === SAVE JSON AND STOP ===
+    script.update!(scenes_data_json: final_payload)
+    # Now this job’s responsibility is done; it does NOT import into “scenes” or “action_beats.”
+    Rails.logger.info "[ParseScriptJob] ✔️ JSON stored to script.scenes_data_json; import step is separate."
+
+    # === INSTANTLY HAND OFF TO ScriptJsonImporter ===
+    begin
+      ScriptJsonImporter.new(script: script).import!
+      Rails.logger.info "[ParseScriptJob] ✔️ ScriptJsonImporter succeeded for Script##{script_id}"
+    rescue => e
+      Rails.logger.error "[ParseScriptJob] ✗ ScriptJsonImporter failed for Script##{script_id}: #{e.class}: #{e.message}"
+      # You can choose to re‐raise here if you want the job to be marked as failed:
+      # raise
+    end
 
   rescue => e
     Rails.logger.error "[ParseScriptJob] ✗ #{e.class}: #{e.message}"
