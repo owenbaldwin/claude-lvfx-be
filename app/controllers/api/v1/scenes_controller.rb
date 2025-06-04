@@ -1,8 +1,19 @@
 module Api
   module V1
     class ScenesController < ApplicationController
-      before_action :set_sequence
+      before_action :set_sequence, except: [:unsequenced]
       before_action :set_scene, only: [:show, :update, :destroy]
+      before_action :set_production_for_unsequenced, only: [:unsequenced]
+
+      # GET /api/v1/productions/{production_id}/scenes/unsequenced
+      def unsequenced
+        @scenes = @production.scenes
+                           .where(sequence_id: nil)
+                           .where(is_active: true)
+                           .order(:number)
+
+        render json: @scenes, status: :ok, each_serializer: SceneSerializer
+      end
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes
       def index
@@ -69,6 +80,10 @@ module Api
       def set_sequence
         @production = @current_user.productions.find(params[:production_id])
         @sequence = @production.sequences.find(params[:sequence_id])
+      end
+
+      def set_production_for_unsequenced
+        @production = @current_user.productions.find(params[:production_id])
       end
 
       def set_scene

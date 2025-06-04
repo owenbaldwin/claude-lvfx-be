@@ -15,6 +15,8 @@ Rails.application.routes.draw do
         resources :characters,           only: [:index, :show, :create, :update, :destroy]
         resources :character_appearances, only: [:index, :show, :create, :update, :destroy]
 
+        # Unsequenced scenes route
+        get 'scenes/unsequenced', to: 'scenes#unsequenced'
 
         # Scripts routes
         resources :scripts, only: [:index, :show, :create] do
