@@ -32,6 +32,9 @@ Rails.application.routes.draw do
             end
           end
         end
+
+        # Unsequenced action beats route
+        put 'scenes/:scene_id/action_beats/:id/update_unsequenced', to: 'action_beats#update_unsequenced'
       end
     end
   end
