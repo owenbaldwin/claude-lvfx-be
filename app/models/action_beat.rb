@@ -12,7 +12,7 @@ class ActionBeat < ApplicationRecord
   }
 
   belongs_to :scene
-  belongs_to :sequence
+  belongs_to :sequence, optional: true
   belongs_to :script,   optional: true
   belongs_to :production
 
