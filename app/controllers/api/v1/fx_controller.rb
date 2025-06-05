@@ -3,6 +3,7 @@ module Api
     class FxController < ApplicationController
       before_action :set_production
       before_action :set_fx, only: [:show, :update, :destroy]
+      before_action :set_shot, only: [:shot_fxs]
 
       # GET /api/v1/productions/:production_id/fx
       def index
@@ -13,6 +14,16 @@ module Api
       # GET /api/v1/productions/:production_id/fx/:id
       def show
         render json: @fx
+      end
+
+      # GET /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/fxs
+      def shot_fxs
+        @fx = Fx.joins(:shot_fx)
+                  .where(shot_fx: { shot_id: @shot.id })
+                  .where(production_id: @production.id)
+                  .distinct
+                  .order(:name)
+        render json: @fx, status: :ok
       end
 
       # POST /api/v1/productions/:production_id/fx
@@ -52,6 +63,10 @@ module Api
 
       def set_fx
         @fx = @production.fxs.find(params[:id])
+      end
+
+      def set_shot
+        @shot = Shot.find(params[:shot_id])
       end
 
       def fx_params
