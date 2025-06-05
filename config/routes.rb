@@ -27,7 +27,13 @@ Rails.application.routes.draw do
         # Content structure routes - directly under productions
         resources :sequences do
           resources :scenes do
+            # Character routes for scenes
+            get 'characters', to: 'characters#scene_characters'
+
             resources :action_beats do
+              # Character routes for action beats
+              get 'characters', to: 'characters#action_beat_characters'
+
               resources :shots
             end
           end
