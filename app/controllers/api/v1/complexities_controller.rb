@@ -1,22 +1,27 @@
 module Api
   module V1
     class ComplexitiesController < ApplicationController
+      before_action :set_production
       before_action :set_complexity, only: [:show, :update, :destroy]
 
-      # GET /api/v1/complexities
+      # GET /api/v1/productions/:production_id/complexities
       def index
-        @complexities = Complexity.all
+        @complexities = @production.complexities
         render json: @complexities
       end
 
-      # GET /api/v1/complexities/:id
+      # GET /api/v1/productions/:production_id/complexities/:id
       def show
         render json: @complexity
       end
 
-      # POST /api/v1/complexities
+      # POST /api/v1/productions/:production_id/complexities
       def create
+        production = @current_user.productions.find(params[:production_id])
+
         @complexity = Complexity.new(complexity_params)
+        @complexity.production = production
+        @complexity.user = @current_user
 
         if @complexity.save
           render json: @complexity, status: :created
@@ -25,7 +30,7 @@ module Api
         end
       end
 
-      # PATCH/PUT /api/v1/complexities/:id
+      # PATCH/PUT /api/v1/productions/:production_id/complexities/:id
       def update
         if @complexity.update(complexity_params)
           render json: @complexity
@@ -34,7 +39,7 @@ module Api
         end
       end
 
-      # DELETE /api/v1/complexities/:id
+      # DELETE /api/v1/productions/:production_id/complexities/:id
       def destroy
         @complexity.destroy
         head :no_content
@@ -42,12 +47,16 @@ module Api
 
       private
 
+      def set_production
+        @production = @current_user.productions.find(params[:production_id])
+      end
+
       def set_complexity
-        @complexity = Complexity.find(params[:id])
+        @complexity = @production.complexities.find(params[:id])
       end
 
       def complexity_params
-        params.require(:complexity).permit(:level, :description, :production_id, :user_id)
+        params.require(:complexity).permit(:level, :description)
       end
     end
   end

@@ -9,6 +9,8 @@ class Production < ApplicationRecord
   has_many :shots, dependent: :destroy
   has_many :characters, dependent: :destroy
   has_many :character_appearances, dependent: :destroy
+  has_many :complexities, dependent: :destroy
+  has_many :assumptions, dependent: :destroy
 
   validates :title, presence: true
 end
