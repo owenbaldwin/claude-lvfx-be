@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_05_163547) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -66,6 +66,28 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "assets", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.bigint "complexity_id", null: false
+    t.bigint "production_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["complexity_id"], name: "index_assets_on_complexity_id"
+    t.index ["production_id"], name: "index_assets_on_production_id"
+  end
+
+  create_table "assumptions", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.bigint "complexity_id", null: false
+    t.bigint "production_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["complexity_id"], name: "index_assumptions_on_complexity_id"
+    t.index ["production_id"], name: "index_assumptions_on_production_id"
+  end
+
   create_table "character_appearances", force: :cascade do |t|
     t.bigint "character_id", null: false
     t.bigint "scene_id"
@@ -87,6 +109,28 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["production_id"], name: "index_characters_on_production_id"
+  end
+
+  create_table "complexities", force: :cascade do |t|
+    t.string "level"
+    t.text "description"
+    t.bigint "production_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["production_id"], name: "index_complexities_on_production_id"
+    t.index ["user_id"], name: "index_complexities_on_user_id"
+  end
+
+  create_table "fxes", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.bigint "complexity_id", null: false
+    t.bigint "production_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["complexity_id"], name: "index_fxes_on_complexity_id"
+    t.index ["production_id"], name: "index_fxes_on_production_id"
   end
 
   create_table "production_users", force: :cascade do |t|
@@ -165,6 +209,33 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
     t.index ["script_id"], name: "index_sequences_on_script_id"
   end
 
+  create_table "shot_assets", force: :cascade do |t|
+    t.bigint "shot_id", null: false
+    t.bigint "asset_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asset_id"], name: "index_shot_assets_on_asset_id"
+    t.index ["shot_id"], name: "index_shot_assets_on_shot_id"
+  end
+
+  create_table "shot_assumptions", force: :cascade do |t|
+    t.bigint "shot_id", null: false
+    t.bigint "assumption_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assumption_id"], name: "index_shot_assumptions_on_assumption_id"
+    t.index ["shot_id"], name: "index_shot_assumptions_on_shot_id"
+  end
+
+  create_table "shot_fxes", force: :cascade do |t|
+    t.bigint "shot_id", null: false
+    t.bigint "fx_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fx_id"], name: "index_shot_fxes_on_fx_id"
+    t.index ["shot_id"], name: "index_shot_fxes_on_shot_id"
+  end
+
   create_table "shots", force: :cascade do |t|
     t.bigint "action_beat_id", null: false
     t.text "description", null: false
@@ -211,11 +282,19 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
   add_foreign_key "action_beats", "sequences"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "assets", "complexities"
+  add_foreign_key "assets", "productions"
+  add_foreign_key "assumptions", "complexities"
+  add_foreign_key "assumptions", "productions"
   add_foreign_key "character_appearances", "action_beats"
   add_foreign_key "character_appearances", "characters"
   add_foreign_key "character_appearances", "scenes"
   add_foreign_key "character_appearances", "shots"
   add_foreign_key "characters", "productions"
+  add_foreign_key "complexities", "productions"
+  add_foreign_key "complexities", "users"
+  add_foreign_key "fxes", "complexities"
+  add_foreign_key "fxes", "productions"
   add_foreign_key "production_users", "productions"
   add_foreign_key "production_users", "users"
   add_foreign_key "scenes", "productions"
@@ -227,6 +306,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_04_154702) do
   add_foreign_key "sequences", "productions"
   add_foreign_key "sequences", "scripts"
   add_foreign_key "sequences", "sequences", column: "source_sequence_id"
+  add_foreign_key "shot_assets", "assets"
+  add_foreign_key "shot_assets", "shots"
+  add_foreign_key "shot_assumptions", "assumptions"
+  add_foreign_key "shot_assumptions", "shots"
+  add_foreign_key "shot_fxes", "fxes"
+  add_foreign_key "shot_fxes", "shots"
   add_foreign_key "shots", "action_beats"
   add_foreign_key "shots", "productions"
   add_foreign_key "shots", "scenes"
