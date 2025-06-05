@@ -40,6 +40,13 @@ Rails.application.routes.draw do
               get 'characters', to: 'characters#action_beat_characters'
 
               resources :shots do
+                # Assets for this shot
+                get 'assets', to: 'assets#shot_assets'
+                # Assumptions for this shot
+                get 'assumptions', to: 'assumptions#shot_assumptions'
+                # FX for this shot
+                get 'fx', to: 'fx#shot_fxs'
+
                 resources :shot_assumptions
                 resources :shot_assets
                 resources :shot_fx
