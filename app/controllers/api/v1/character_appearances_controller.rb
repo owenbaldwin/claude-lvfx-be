@@ -45,7 +45,7 @@ module Api
       private
 
       def set_production
-        @production = current_user.productions.find(params[:production_id])
+        @production = @current_user.productions.find(params[:production_id])
       end
 
       def set_character_appearance
