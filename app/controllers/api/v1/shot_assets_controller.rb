@@ -4,18 +4,18 @@ module Api
       before_action :set_parent_shot
       before_action :set_shot_asset, only: [:show, :update, :destroy]
 
-      # GET /api/v1/productions/:production_id/…/shots/:shot_id/shot_assets
+      # GET /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_assets
       def index
         @shot_assets = @shot.shot_assets
         render json: @shot_assets
       end
 
-      # GET /api/v1/productions/:production_id/…/shots/:shot_id/shot_assets/:id
+      # GET /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_assets/:id
       def show
         render json: @shot_asset
       end
 
-      # POST /api/v1/productions/:production_id/…/shots/:shot_id/shot_assets
+      # POST /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_assets
       def create
         # Build via the parent shot so shot_id is set automatically
         @shot_asset = @shot.shot_assets.build(shot_asset_params)
@@ -27,7 +27,7 @@ module Api
         end
       end
 
-      # PATCH/PUT /api/v1/productions/:production_id/…/shots/:shot_id/shot_assets/:id
+      # PATCH/PUT /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_assets/:id
       def update
         if @shot_asset.update(shot_asset_params)
           render json: @shot_asset
@@ -36,7 +36,7 @@ module Api
         end
       end
 
-      # DELETE /api/v1/productions/:production_id/…/shots/:shot_id/shot_assets/:id
+      # DELETE /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_assets/:id
       def destroy
         @shot_asset.destroy
         head :no_content

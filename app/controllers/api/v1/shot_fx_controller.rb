@@ -4,18 +4,18 @@ module Api
       before_action :set_parent_shot
       before_action :set_shot_fx, only: [:show, :update, :destroy]
 
-      # GET /api/v1/productions/:production_id/…/shots/:shot_id/shot_fx
+      # GET /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_fx
       def index
         @shot_fx_records = @shot.shot_fx
         render json: @shot_fx_records
       end
 
-      # GET /api/v1/productions/:production_id/…/shots/:shot_id/shot_fx/:id
+      # GET /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_fx/:id
       def show
         render json: @shot_fx
       end
 
-      # POST /api/v1/productions/:production_id/…/shots/:shot_id/shot_fx
+      # POST /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_fx
       def create
         @shot_fx = @shot.shot_fx.build(shot_fx_params)
         if @shot_fx.save
@@ -25,7 +25,7 @@ module Api
         end
       end
 
-      # PATCH/PUT /api/v1/productions/:production_id/…/shots/:shot_id/shot_fx/:id
+      # PATCH/PUT /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_fx/:id
       def update
         if @shot_fx.update(shot_fx_params)
           render json: @shot_fx
@@ -34,7 +34,7 @@ module Api
         end
       end
 
-      # DELETE /api/v1/productions/:production_id/…/shots/:shot_id/shot_fx/:id
+      # DELETE /api/v1/productions/:production_id/sequences/:sequence_id/scenes/:scene_id/action_beats/:action_beat_id/shots/:shot_id/shot_fx/:id
       def destroy
         @shot_fx.destroy
         head :no_content
