@@ -18,6 +18,15 @@ class Shot < ApplicationRecord
   belongs_to :production
   has_many   :character_appearances, dependent: :nullify
 
+  has_many :shot_assumptions, dependent: :destroy
+  has_many :assumptions, through: :shot_assumptions
+
+  has_many :shot_assets, dependent: :destroy
+  has_many :assets, through: :shot_assets
+
+  has_many :shot_fx, dependent: :destroy
+  has_many :fxs, through: :shot_fx
+
   validates :number,          presence: true, numericality: { only_integer: true }
   validates :number,          uniqueness: { scope: :action_beat_id }
   validates :description,     presence: true

@@ -15,6 +15,11 @@ Rails.application.routes.draw do
         resources :characters,           only: [:index, :show, :create, :update, :destroy]
         resources :character_appearances, only: [:index, :show, :create, :update, :destroy]
 
+        resources :complexities
+        resources :assumptions
+        resources :assets
+        resources :fx
+
         # Unsequenced scenes route
         get 'scenes/unsequenced', to: 'scenes#unsequenced'
         put 'scenes/:id/update_unsequenced', to: 'scenes#update_unsequenced'
@@ -34,7 +39,11 @@ Rails.application.routes.draw do
               # Character routes for action beats
               get 'characters', to: 'characters#action_beat_characters'
 
-              resources :shots
+              resources :shots do
+                resources :shot_assumptions
+                resources :shot_assets
+                resources :shot_fx
+              end
             end
           end
         end
