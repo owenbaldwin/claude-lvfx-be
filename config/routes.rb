@@ -20,6 +20,9 @@ Rails.application.routes.draw do
         resources :assets
         resources :fx
 
+        # Production shots route
+        get 'shots', to: 'shots#production_shots'
+
         # Unsequenced scenes route
         get 'scenes/unsequenced', to: 'scenes#unsequenced'
         put 'scenes/:id/update_unsequenced', to: 'scenes#update_unsequenced'
