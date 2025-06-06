@@ -1,8 +1,22 @@
 module Api
   module V1
     class ShotsController < ApplicationController
-      before_action :set_action_beat
+      before_action :set_action_beat, except: [:production_shots]
       before_action :set_shot, only: [:show, :update, :destroy]
+      before_action :set_production_for_production_shots, only: [:production_shots]
+
+      # GET /api/v1/productions/{production_id}/shots
+      def production_shots
+        @shots = @production.shots
+                            .joins(action_beat: { scene: :sequence })
+                            .select('shots.*,
+                                     action_beats.number as action_beat_number,
+                                     scenes.number as scene_number,
+                                     sequences.prefix as sequence_prefix')
+                            .order(:number, :version_number)
+
+        render json: @shots, status: :ok, each_serializer: ShotSerializer
+      end
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{action_beat_id}/shots
       def index
@@ -57,6 +71,10 @@ module Api
       end
 
       private
+
+      def set_production_for_production_shots
+        @production = @current_user.productions.find(params[:production_id])
+      end
 
       def set_action_beat
         @production = @current_user.productions.find(params[:production_id])
