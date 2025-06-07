@@ -13,7 +13,10 @@ Rails.application.routes.draw do
         resources :users, controller: 'production_users', only: [:index, :create, :destroy]
 
         resources :characters,           only: [:index, :show, :create, :update, :destroy]
-        resources :character_appearances, only: [:index, :show, :create, :update, :destroy]
+        resources :character_appearances, only: [:index, :show, :create, :update, :destroy] do
+          post 'for_action_beat', on: :collection
+          post 'for_scene', on: :collection
+        end
 
         resources :complexities
         resources :assumptions

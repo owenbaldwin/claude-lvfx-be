@@ -42,6 +42,48 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/productions/:production_id/character_appearances/for_action_beat
+      def create_for_action_beat
+        @character = @production.characters.find(params[:character_id])
+        @action_beat = ActionBeat.joins(scene: { sequence: :production })
+                                 .where(productions: { id: @production.id })
+                                 .find(params[:action_beat_id])
+
+        @appearance = @production.character_appearances.new(
+          character: @character,
+          action_beat: @action_beat
+        )
+
+        if @appearance.save
+          render json: @appearance, status: :created
+        else
+          render json: { errors: @appearance.errors.full_messages }, status: :unprocessable_entity
+        end
+      rescue ActiveRecord::RecordNotFound => e
+        render json: { error: "Character or Action Beat not found" }, status: :not_found
+      end
+
+      # POST /api/v1/productions/:production_id/character_appearances/for_scene
+      def create_for_scene
+        @character = @production.characters.find(params[:character_id])
+        @scene = Scene.joins(sequence: :production)
+                      .where(productions: { id: @production.id })
+                      .find(params[:scene_id])
+
+        @appearance = @production.character_appearances.new(
+          character: @character,
+          scene: @scene
+        )
+
+        if @appearance.save
+          render json: @appearance, status: :created
+        else
+          render json: { errors: @appearance.errors.full_messages }, status: :unprocessable_entity
+        end
+      rescue ActiveRecord::RecordNotFound => e
+        render json: { error: "Character or Scene not found" }, status: :not_found
+      end
+
       private
 
       def set_production
