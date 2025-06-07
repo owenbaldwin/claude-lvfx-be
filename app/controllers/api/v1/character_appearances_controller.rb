@@ -43,13 +43,13 @@ module Api
       end
 
       # POST /api/v1/productions/:production_id/character_appearances/for_action_beat
-      def create_for_action_beat
+      def for_action_beat
         @character = @production.characters.find(params[:character_id])
         @action_beat = ActionBeat.joins(scene: { sequence: :production })
                                  .where(productions: { id: @production.id })
                                  .find(params[:action_beat_id])
 
-        @appearance = @production.character_appearances.new(
+        @appearance = CharacterAppearance.new(
           character: @character,
           action_beat: @action_beat
         )
@@ -64,13 +64,13 @@ module Api
       end
 
       # POST /api/v1/productions/:production_id/character_appearances/for_scene
-      def create_for_scene
+      def for_scene
         @character = @production.characters.find(params[:character_id])
         @scene = Scene.joins(sequence: :production)
                       .where(productions: { id: @production.id })
                       .find(params[:scene_id])
 
-        @appearance = @production.character_appearances.new(
+        @appearance = CharacterAppearance.new(
           character: @character,
           scene: @scene
         )
