@@ -1,9 +1,9 @@
 module Api
   module V1
     class ActionBeatsController < ApplicationController
-      before_action :set_scene, except: [:update_unsequenced, :generate_shots, :job_status, :job_results]
+      before_action :set_scene, except: [:update_unsequenced, :generate_shots, :job_status, :job_results, :index_unsequenced]
       before_action :set_action_beat, only: [:show, :update, :destroy]
-      before_action :set_production_and_scene_for_unsequenced, only: [:update_unsequenced]
+      before_action :set_production_and_scene_for_unsequenced, only: [:update_unsequenced, :index_unsequenced]
       before_action :set_unsequenced_action_beat, only: [:update_unsequenced]
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats
@@ -31,6 +31,14 @@ module Api
 
         render json: @action_beats, status: :ok, each_serializer: ActionBeatSerializer
         # render json: @action_beats, status: :ok
+      end
+
+      # GET /api/v1/productions/{production_id}/scenes/{scene_id}/action_beats/unsequenced
+      def index_unsequenced
+        @action_beats = @scene.action_beats
+                              .where(sequence_id: nil, is_active: true)
+                              .order(:number)
+        render json: @action_beats, status: :ok, each_serializer: ActionBeatSerializer
       end
 
       # GET /api/v1/productions/{production_id}/sequences/{sequence_id}/scenes/{scene_id}/action_beats/{id}
@@ -65,10 +73,22 @@ module Api
       def update_unsequenced
         Rails.logger.debug "Received params: #{params.inspect}"
         Rails.logger.debug "Action beat params: #{action_beat_params.inspect}"
-        Rails.logger.debug "Action beat before update: scene_id=#{@action_beat.scene_id}, id=#{@action_beat.id}"
+        Rails.logger.debug "Action beat before update: scene_id=#{@action_beat.scene_id}, sequence_id=#{@action_beat.sequence_id}, id=#{@action_beat.id}"
+
+        # Validate sequence_id if provided
+        if action_beat_params[:sequence_id].present?
+          sequence = @production.sequences.find_by(id: action_beat_params[:sequence_id])
+          unless sequence
+            Rails.logger.error "Invalid sequence_id: #{action_beat_params[:sequence_id]} not found in production #{@production.id}"
+            render json: { errors: ["Sequence not found"] }, status: :unprocessable_entity
+            return
+          end
+          Rails.logger.debug "Sequence validation passed: sequence #{sequence.id} (#{sequence.name}) found"
+        end
 
         if @action_beat.update(action_beat_params)
-          Rails.logger.debug "Action beat after update: scene_id=#{@action_beat.scene_id}, id=#{@action_beat.id}"
+          @action_beat.reload  # Ensure we have the latest data
+          Rails.logger.debug "Action beat after update: scene_id=#{@action_beat.scene_id}, sequence_id=#{@action_beat.sequence_id}, id=#{@action_beat.id}"
           render json: @action_beat, status: :ok
         else
           Rails.logger.debug "Update failed: #{@action_beat.errors.full_messages}"
@@ -192,8 +212,24 @@ module Api
 
         # Handle camelCase conversion for update_unsequenced
         if action_name == 'update_unsequenced'
-          permitted_params[:scene_id] = params[:sceneId] if params[:sceneId].present?
-          permitted_params[:sequence_id] = params[:sequenceId] if params[:sequenceId].present?
+          Rails.logger.debug "Original params before camelCase conversion: #{params.to_unsafe_h}"
+
+          # Handle scene_id / sceneId
+          if params[:sceneId].present?
+            permitted_params[:scene_id] = params[:sceneId]
+          end
+
+          # Handle sequence_id / sequenceId
+          if params[:sequenceId].present?
+            permitted_params[:sequence_id] = params[:sequenceId]
+            Rails.logger.debug "Found sequenceId in params: #{params[:sequenceId]}"
+          elsif params[:sequence_id].present?
+            Rails.logger.debug "Found sequence_id in params: #{params[:sequence_id]}"
+          else
+            Rails.logger.debug "No sequence_id or sequenceId found in params"
+          end
+
+          Rails.logger.debug "Permitted params after camelCase conversion: #{permitted_params}"
         end
 
         permitted_params
