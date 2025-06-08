@@ -1,7 +1,7 @@
 module Api
   module V1
     class ActionBeatsController < ApplicationController
-      before_action :set_scene, except: [:update_unsequenced, :generate_shots]
+      before_action :set_scene, except: [:update_unsequenced, :generate_shots, :job_status, :job_results]
       before_action :set_action_beat, only: [:show, :update, :destroy]
       before_action :set_production_and_scene_for_unsequenced, only: [:update_unsequenced]
       before_action :set_unsequenced_action_beat, only: [:update_unsequenced]
@@ -111,11 +111,58 @@ module Api
           return
         end
 
-        # Queue the background job
-        GenerateShotsJob.perform_later(@current_user.id, action_beat_ids)
+        # Create ShotGeneration record to track the job
+        shot_generation = @production.shot_generations.create!(
+          job_id: SecureRandom.uuid,
+          status: 'pending'
+        )
 
-        # Return 202 Accepted with empty body
-        head :accepted
+        # Queue the background job with the shot_generation ID
+        GenerateShotsJob.perform_later(@current_user.id, action_beat_ids, shot_generation.id)
+
+        # Return 202 Accepted with job information
+        render json: {
+          job_id: shot_generation.job_id,
+          status: shot_generation.status,
+          message: 'Shot generation job has been queued'
+        }, status: :accepted
+      end
+
+      # GET /api/v1/productions/:production_id/action_beats/job/:job_id/status
+      def job_status
+        @production = @current_user.productions.find(params[:production_id])
+        shot_generation = @production.shot_generations.find_by!(job_id: params[:job_id])
+
+        render json: {
+          job_id: shot_generation.job_id,
+          status: shot_generation.status,
+          error: shot_generation.error,
+          created_at: shot_generation.created_at,
+          updated_at: shot_generation.updated_at
+        }
+      end
+
+      # GET /api/v1/productions/:production_id/action_beats/job/:job_id/results
+      def job_results
+        @production = @current_user.productions.find(params[:production_id])
+        shot_generation = @production.shot_generations.find_by!(job_id: params[:job_id])
+
+        unless shot_generation.completed?
+          render json: {
+            job_id: shot_generation.job_id,
+            status: shot_generation.status,
+            error: shot_generation.error || 'Results not available - job has not completed successfully'
+          }, status: :accepted
+          return
+        end
+
+        render json: {
+          job_id: shot_generation.job_id,
+          status: shot_generation.status,
+          results: shot_generation.results_json,
+          created_at: shot_generation.created_at,
+          completed_at: shot_generation.updated_at
+        }
       end
 
       private

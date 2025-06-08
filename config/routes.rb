@@ -27,6 +27,8 @@ Rails.application.routes.draw do
         resources :action_beats, only: [] do
           collection do
             post :generate_shots
+            get 'generate_shots/:job_id/status', action: :job_status
+            get 'generate_shots/:job_id/results', action: :job_results
           end
         end
 
