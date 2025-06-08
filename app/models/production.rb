@@ -13,6 +13,7 @@ class Production < ApplicationRecord
   has_many :assumptions, dependent: :destroy
   has_many :assets, dependent: :destroy
   has_many :fxs, dependent: :destroy
+  has_many :shot_generations, dependent: :destroy
 
   validates :title, presence: true
 end

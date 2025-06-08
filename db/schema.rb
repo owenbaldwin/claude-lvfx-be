@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_06_05_163547) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_08_105719) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -236,6 +236,18 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_05_163547) do
     t.index ["shot_id"], name: "index_shot_fxes_on_shot_id"
   end
 
+  create_table "shot_generations", force: :cascade do |t|
+    t.string "job_id"
+    t.bigint "production_id", null: false
+    t.string "status"
+    t.text "error"
+    t.json "results_json"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["job_id"], name: "index_shot_generations_on_job_id", unique: true
+    t.index ["production_id"], name: "index_shot_generations_on_production_id"
+  end
+
   create_table "shots", force: :cascade do |t|
     t.bigint "action_beat_id", null: false
     t.text "description", null: false
@@ -312,6 +324,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_05_163547) do
   add_foreign_key "shot_assumptions", "shots"
   add_foreign_key "shot_fxes", "fxes"
   add_foreign_key "shot_fxes", "shots"
+  add_foreign_key "shot_generations", "productions"
   add_foreign_key "shots", "action_beats"
   add_foreign_key "shots", "productions"
   add_foreign_key "shots", "scenes"
