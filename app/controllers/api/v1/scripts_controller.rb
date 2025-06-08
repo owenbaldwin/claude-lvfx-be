@@ -53,13 +53,26 @@ module Api
         script = @production.scripts.find(params[:id])
         script_parse = script.script_parses.find_by!(job_id: params[:job_id])
 
-        render json: {
-          job_id: script_parse.job_id,
+        response = {
           status: script_parse.status,
-          error: script_parse.error,
-          created_at: script_parse.created_at,
-          updated_at: script_parse.updated_at
+          error: script_parse.error
         }
+
+        # Add optional fields based on status
+        case script_parse.status
+        when 'processing'
+          response[:current_step] = 'Parsing script content...'
+          response[:progress] = 50 # Midway through processing
+        when 'completed'
+          response[:progress] = 100
+        when 'pending'
+          response[:current_step] = 'Queued for processing'
+          response[:progress] = 0
+        when 'failed'
+          response[:progress] = 0
+        end
+
+        render json: response
       end
 
       # GET /api/v1/productions/:production_id/scripts/:id/parse/:job_id/results
