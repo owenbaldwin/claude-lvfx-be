@@ -1,7 +1,7 @@
 module Api
   module V1
     class ActionBeatsController < ApplicationController
-      before_action :set_scene, except: [:update_unsequenced]
+      before_action :set_scene, except: [:update_unsequenced, :generate_shots]
       before_action :set_action_beat, only: [:show, :update, :destroy]
       before_action :set_production_and_scene_for_unsequenced, only: [:update_unsequenced]
       before_action :set_unsequenced_action_beat, only: [:update_unsequenced]
@@ -80,6 +80,42 @@ module Api
       def destroy
         @action_beat.destroy
         head :no_content
+      end
+
+      # POST /api/v1/productions/:production_id/action_beats/generate_shots
+      def generate_shots
+        # Get production and validate user access
+        @production = @current_user.productions.find(params[:production_id])
+
+        # Validate required parameters
+        unless params[:action_beat_ids].present?
+          render json: { error: 'action_beat_ids parameter is required' }, status: :bad_request
+          return
+        end
+
+        # Validate that action_beat_ids is an array of integers
+        action_beat_ids = params[:action_beat_ids]
+        unless action_beat_ids.is_a?(Array) && action_beat_ids.all? { |id| id.is_a?(Integer) || id.to_s.match?(/\A\d+\z/) }
+          render json: { error: 'action_beat_ids must be an array of integers' }, status: :bad_request
+          return
+        end
+
+        # Convert to integers
+        action_beat_ids = action_beat_ids.map(&:to_i)
+
+        # Validate that all action beats belong to this production
+        action_beats = ActionBeat.where(id: action_beat_ids, production_id: @production.id)
+        if action_beats.count != action_beat_ids.count
+          invalid_ids = action_beat_ids - action_beats.pluck(:id)
+          render json: { error: "Action beats with IDs #{invalid_ids.join(', ')} do not belong to this production or do not exist" }, status: :bad_request
+          return
+        end
+
+        # Queue the background job
+        GenerateShotsJob.perform_later(@current_user.id, action_beat_ids)
+
+        # Return 202 Accepted with empty body
+        head :accepted
       end
 
       private
