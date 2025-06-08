@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_06_08_105719) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_08_114047) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -177,6 +177,20 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_08_105719) do
     t.index ["sequence_id"], name: "index_scenes_on_sequence_id"
   end
 
+  create_table "script_parses", force: :cascade do |t|
+    t.string "job_id"
+    t.bigint "production_id", null: false
+    t.bigint "script_id", null: false
+    t.string "status"
+    t.text "error"
+    t.json "results_json"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["job_id"], name: "index_script_parses_on_job_id", unique: true
+    t.index ["production_id"], name: "index_script_parses_on_production_id"
+    t.index ["script_id"], name: "index_script_parses_on_script_id"
+  end
+
   create_table "scripts", force: :cascade do |t|
     t.bigint "production_id", null: false
     t.string "title"
@@ -313,6 +327,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_08_105719) do
   add_foreign_key "scenes", "scenes", column: "source_scene_id"
   add_foreign_key "scenes", "scripts"
   add_foreign_key "scenes", "sequences"
+  add_foreign_key "script_parses", "productions"
+  add_foreign_key "script_parses", "scripts"
   add_foreign_key "scripts", "productions"
   add_foreign_key "scripts", "scripts", column: "previous_script_id"
   add_foreign_key "sequences", "productions"
