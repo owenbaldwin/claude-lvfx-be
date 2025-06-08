@@ -23,6 +23,13 @@ Rails.application.routes.draw do
         resources :assets
         resources :fx
 
+        # Action beats routes for shot generation
+        resources :action_beats, only: [] do
+          collection do
+            post :generate_shots
+          end
+        end
+
         # Production shots route
         get 'shots', to: 'shots#production_shots'
 
