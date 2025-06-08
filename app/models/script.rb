@@ -4,6 +4,7 @@ class Script < ApplicationRecord
   has_many   :scenes,       through: :sequences
   has_many   :action_beats, through: :scenes
   has_many   :shots,        through: :action_beats
+  has_many   :script_parses, dependent: :destroy
 
 
   before_validation :assign_version_and_previous

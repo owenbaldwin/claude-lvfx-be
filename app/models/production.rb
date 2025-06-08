@@ -14,6 +14,7 @@ class Production < ApplicationRecord
   has_many :assets, dependent: :destroy
   has_many :fxs, dependent: :destroy
   has_many :shot_generations, dependent: :destroy
+  has_many :script_parses, dependent: :destroy
 
   validates :title, presence: true
 end

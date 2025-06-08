@@ -10,6 +10,7 @@ Rails.application.routes.draw do
 
       # Production routes with nested resources
       resources :productions do
+        resources :users, only: [:index]
         resources :users, controller: 'production_users', only: [:index, :create, :destroy]
 
         resources :characters,           only: [:index, :show, :create, :update, :destroy]
@@ -42,6 +43,8 @@ Rails.application.routes.draw do
         # Scripts routes
         resources :scripts, only: [:index, :show, :create] do
           post :parse, on: :member
+          get 'parse/:job_id/status', action: :parse_status, on: :member
+          get 'parse/:job_id/results', action: :parse_results, on: :member
         end
 
         # Content structure routes - directly under productions

@@ -28,10 +28,61 @@ module Api
 
       # POST /api/v1/productions/:production_id/scripts/:id/parse
       def parse
-        script = Script.find(params[:id])
-        # enqueue the parsing job
-        ParseScriptJob.perform_later(params[:production_id], script.id)
-        render json: { status: 'queued' }, status: :accepted
+        script = @production.scripts.find(params[:id])
+
+        # Create ScriptParse record to track the job
+        script_parse = @production.script_parses.create!(
+          job_id: SecureRandom.uuid,
+          script: script,
+          status: 'pending'
+        )
+
+        # enqueue the parsing job with the script_parse ID
+        ParseScriptJob.perform_later(params[:production_id], script.id, script_parse.id)
+
+        # Return job information
+        render json: {
+          job_id: script_parse.job_id,
+          status: script_parse.status,
+          message: 'Script parsing job has been queued'
+        }, status: :accepted
+      end
+
+      # GET /api/v1/productions/:production_id/scripts/:id/parse/:job_id/status
+      def parse_status
+        script = @production.scripts.find(params[:id])
+        script_parse = script.script_parses.find_by!(job_id: params[:job_id])
+
+        render json: {
+          job_id: script_parse.job_id,
+          status: script_parse.status,
+          error: script_parse.error,
+          created_at: script_parse.created_at,
+          updated_at: script_parse.updated_at
+        }
+      end
+
+      # GET /api/v1/productions/:production_id/scripts/:id/parse/:job_id/results
+      def parse_results
+        script = @production.scripts.find(params[:id])
+        script_parse = script.script_parses.find_by!(job_id: params[:job_id])
+
+        unless script_parse.completed?
+          render json: {
+            job_id: script_parse.job_id,
+            status: script_parse.status,
+            error: script_parse.error || 'Results not available - job has not completed successfully'
+          }, status: :accepted
+          return
+        end
+
+        render json: {
+          job_id: script_parse.job_id,
+          status: script_parse.status,
+          results: script_parse.results_json,
+          created_at: script_parse.created_at,
+          completed_at: script_parse.updated_at
+        }
       end
 
       # PUT /api/v1/productions/{production_id}/scripts/{id}
