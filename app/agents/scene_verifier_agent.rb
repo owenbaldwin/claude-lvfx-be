@@ -88,10 +88,13 @@ class SceneVerifierAgent < ApplicationAgent
   def build_condensed_script(script_text, scenes_to_verify)
     # Extract only the portions of the script that contain the scenes we're verifying
     scene_sluglines = scenes_to_verify.map do |scene|
-      int_ext = scene["int_ext"]&.upcase || "INT"
-      location = scene["location"] || "UNKNOWN"
-      time = scene["time"] || "DAY"
-      "#{int_ext}. #{location} - #{time}"
+      # Use the original slugline for matching if available, otherwise reconstruct it
+      scene["original_slugline"] || begin
+        int_ext = scene["int_ext"]&.upcase || "INT"
+        location = scene["location"] || "UNKNOWN"
+        time = scene["time"] || "DAY"
+        "#{int_ext}. #{location} - #{time}"
+      end
     end
 
     lines = script_text.split("\n")

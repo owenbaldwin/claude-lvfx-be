@@ -162,28 +162,16 @@ class ScriptParserAgent < ApplicationAgent
 
     sluglines.each_with_index do |slugline, index|
       scene_number = index + 1
-      scene_data = nil
+      log_info "Extracting scene #{scene_number}/#{sluglines.length}: #{slugline}"
 
-      # Retry logic for scene extraction
-      (1..MAX_RETRIES).each do |attempt|
-        log_info "Extracting scene #{scene_number}/#{sluglines.length}: #{slugline} (attempt #{attempt})"
-
-        scene_data = scene_agent.extract_scene_data_for_slugline(script_text, slugline, scene_number)
-
-        if scene_data
-          break
-        else
-          log_error "Failed to extract scene #{scene_number} on attempt #{attempt}"
-          sleep(1) if attempt < MAX_RETRIES  # Brief pause before retry
-        end
-      end
+      scene_data = scene_agent.extract_scene_data_for_slugline(script_text, slugline, scene_number)
 
       if scene_data
         extracted_scenes << scene_data
         log_info "✅ Successfully extracted scene #{scene_number}"
       else
         failed_scenes << { slugline: slugline, scene_number: scene_number }
-        log_error "❌ Failed to extract scene #{scene_number} after #{MAX_RETRIES} attempts"
+        log_error "❌ Failed to extract scene #{scene_number}"
       end
     end
 

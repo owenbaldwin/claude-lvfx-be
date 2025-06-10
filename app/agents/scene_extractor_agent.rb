@@ -29,6 +29,8 @@ class SceneExtractorAgent < ApplicationAgent
 
           if parsed_response.is_a?(Hash) && parsed_response["scene_number"]
             Rails.logger.info "[SceneExtractorAgent] ✅ Successfully extracted scene #{scene_number}"
+            # Add the original slugline text to the response
+            parsed_response["original_slugline"] = slugline.is_a?(Hash) ? slugline[:text] : slugline.to_s
             return parsed_response
           else
             Rails.logger.error "[SceneExtractorAgent] Invalid response format for scene #{scene_number}"
@@ -52,7 +54,8 @@ class SceneExtractorAgent < ApplicationAgent
   private
 
   def extract_scene_content(script_text, target_slugline)
-    Rails.logger.info "[SceneExtractorAgent] Extracting content for scene: #{target_slugline}"
+    slugline_text = target_slugline.is_a?(Hash) ? target_slugline[:text] : target_slugline.to_s
+    log_info "Attempting to extract content for slugline: '#{slugline_text}'"
 
     lines = script_text.split("\n")
     scene_start_index = nil
@@ -61,14 +64,17 @@ class SceneExtractorAgent < ApplicationAgent
     # Find the start of the target scene
     lines.each_with_index do |line, index|
       # Check if this line matches our target slugline (with some flexibility for formatting)
-      if sluglines_match?(line.strip, target_slugline)
+      if sluglines_match?(line.strip, slugline_text)
         scene_start_index = index
-        Rails.logger.info "[SceneExtractorAgent] Found scene start at line #{index + 1}: #{line.strip}"
+        log_info "Found scene start at line #{index + 1}: #{line.strip}"
         break
       end
     end
 
-    return nil if scene_start_index.nil?
+    if scene_start_index.nil?
+      log_error "FAILED to find start of scene for: '#{slugline_text}'"
+      return nil
+    end
 
     # Find the end of the scene (next slugline)
     ((scene_start_index + 1)...lines.length).each do |index|
