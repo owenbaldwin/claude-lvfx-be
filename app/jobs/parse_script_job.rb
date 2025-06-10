@@ -17,6 +17,16 @@ class ParseScriptJob < ApplicationJob
       # Update status to processing if we have a tracking record
       script_parse&.update!(status: 'processing')
 
+      # Check if script already has parsed data and clear it if reprocessing
+      if script.scenes_data_json.present?
+        Rails.logger.info "[ParseScriptJob] 🔄 Clearing existing parsed data for Script##{script_id}"
+        script.update!(scenes_data_json: nil)
+
+        # Also clean up any existing database records from previous imports
+        script.scenes.destroy_all
+        script.action_beats.destroy_all
+      end
+
       pdf_data = script.file.download
 
       # 1) Read entire PDF → raw_text
@@ -25,39 +35,35 @@ class ParseScriptJob < ApplicationJob
 
       # 2) First GPT call: extract sluglines JSON as before...
       sluglines_prompt = <<~PROMPT
-        You are a script‐analysis assistant. You will receive the full text of a film script.
-        Your job is to extract only the actual scene headings (sluglines) and return them as valid JSON
-        with two fields:
+        You are a script‐analysis assistant. Extract ONLY the scene headings (sluglines) from this film script.
 
-          1. "index": a strictly sequential integer starting at 1 and incrementing by 1 for each extracted slugline,
-             regardless of the scene's printed number.
-          2. "text": the exact scene heading as it appears in the script, including any alphanumeric suffix ("3A", "10B", etc.), without alteration.
-
-        Output JSON format, no extra text:
+        **CRITICAL REQUIREMENTS:**
+        1. Return VALID JSON only - no markdown, no extra text, no explanations
+        2. Use this EXACT format:
         {
           "scenes": [
             { "index": 1, "text": "1 INT. HOUSE – DAY" },
-            { "index": 2, "text": "2 EXT. GARDEN – DAY" },
-            …
+            { "index": 2, "text": "2 EXT. GARDEN – DAY" }
           ]
         }
 
-        Strict rules:
-        • Preserve printed scene numbers and any letter suffix (e.g. "3A"). Do not renumber or strip suffixes.
-        • Use "index" only for counting 1, 2, 3, … in order of appearance.
-        • If you see "3A INT. LOCATION – NIGHT" then text must begin with "3A".
-        • Ignore "CONT'D" or "CONTINUED" repeats of the same slugline.
-        • Only extract lines that begin with either:
-          a) a scene number (digits, possibly followed by a letter), or
-          b) "INT.", "EXT.", or "INT./EXT." (if the script omits a printed number).
-        • Each extracted line must match the pattern:
-          [scene number][space][INT./EXT./INT./EXT.][space][LOCATION][space "–" space][TIME]
-          e.g. "3A EXT. ALLEYWAY – DAY" or "10B INT./EXT. CAR – NIGHT".
-        • Preserve original casing and spacing exactly.
-        • Do not invent or hallucinate sluglines; only extract what appears in the provided text.
-        • Process the entire script until the very end.
+        **EXTRACTION RULES:**
+        • "index": Sequential counter starting at 1 (regardless of scene's printed number)
+        • "text": EXACT scene heading as written, including any suffix like "3A", "10B"
+        • Extract lines starting with: scene number OR "INT." OR "EXT." OR "INT./EXT."
+        • Pattern: [NUMBER][SPACE][INT./EXT.][SPACE][LOCATION][SPACE]–[SPACE][TIME]
+        • Preserve original spacing, casing, and punctuation EXACTLY
+        • Skip "CONT'D" or "CONTINUED" variations of same slugline
+        • Do NOT modify, renumber, or invent sluglines
+        • Process the ENTIRE script to the end
 
-        =====
+        **EXAMPLES:**
+        ✓ "3A EXT. ALLEYWAY – DAY"
+        ✓ "10B INT./EXT. CAR – NIGHT"
+        ✓ "INT. KITCHEN – MORNING" (if no number)
+        ✗ Skip: "3A EXT. ALLEYWAY – DAY (CONT'D)"
+
+        Script text:
         #{raw_text}
       PROMPT
 
@@ -68,24 +74,45 @@ class ParseScriptJob < ApplicationJob
 
       slug_response = client.chat(
         parameters: {
-          model:       "gpt-4.1-nano-2025-04-14",
+          model:       "gpt-4o",  # Use more reliable model
           messages:    [{ role: "user", content: sluglines_prompt }],
-          max_tokens:  32_768,
+          max_tokens:  16_384,
           temperature: 0
         }
       )
 
       Rails.logger.info "🤖 GPT‐4 raw slugline response for Script##{script_id}: #{slug_response.to_json}"
 
-      # Extract the JSON text from the assistant's reply
+      # Extract and validate JSON response
       sluglines_json = slug_response.dig("choices", 0, "message", "content")
-      unless sluglines_json.is_a?(String) && sluglines_json.strip.start_with?("{")
-        Rails.logger.error "[ParseScriptJob] ✗ Unexpected sluglines output: #{sluglines_json.inspect}"
-        return
+      unless sluglines_json.is_a?(String) && sluglines_json.strip.length > 0
+        Rails.logger.error "[ParseScriptJob] ✗ Empty sluglines response for Script##{script_id}"
+        raise "Empty response from OpenAI for sluglines extraction"
       end
 
-      parsed     = JSON.parse(sluglines_json)
-      all_scenes = parsed.fetch("scenes")   # => [ { "index" => 1, "text" => "1 EXT.…" }, … ]
+      # Clean and validate JSON
+      cleaned_json = clean_json_response(sluglines_json)
+      parsed = JSON.parse(cleaned_json)
+
+      unless parsed.is_a?(Hash) && parsed["scenes"].is_a?(Array)
+        Rails.logger.error "[ParseScriptJob] ✗ Invalid JSON structure: #{parsed.inspect}"
+        raise "Invalid JSON structure in sluglines response"
+      end
+
+      all_scenes = parsed.fetch("scenes")
+
+      if all_scenes.empty?
+        Rails.logger.error "[ParseScriptJob] ✗ No scenes extracted from script"
+        raise "No scenes found in script"
+      end
+
+      # Validate scene structure
+      all_scenes.each_with_index do |scene, idx|
+        unless scene.is_a?(Hash) && scene["index"].present? && scene["text"].present?
+          Rails.logger.error "[ParseScriptJob] ✗ Invalid scene structure at index #{idx}: #{scene.inspect}"
+          raise "Invalid scene structure in response"
+        end
+      end
 
       # 3) Build index → slugline text and collect indices
       index_to_slug = {}
@@ -111,62 +138,14 @@ class ParseScriptJob < ApplicationJob
         end
       end
 
-
       # 5) PRECOMPUTE CHARACTER‐OFFSETS OF EACH SLUGLINE IN raw_text
       slug_offset_map = {}
       raw_lines       = raw_text.lines
 
-      def normalize_for_matching(str)
-        str
-          .gsub(/['']/, "'")                      # map curly apostrophes → straight
-          .gsub(/[–—‒]/, "-")                     # normalize any dash → hyphen
-          .gsub(/\b(INT)\.{1,}/, '\1')            # collapse any run of "." after INT
-          .gsub(/\b(EXT)\.{1,}/, '\1')            # collapse any run of "." after EXT
-          .gsub(/[^A-Za-z0-9\-' ]/, " ")          # keep only letters, digits, hyphen, apostrophe, space
-          .strip
-          .gsub(/\s+/, " ")
-      end
-
       all_indices.each do |idx|
         slug            = index_to_slug[idx]
         normalized_slug = normalize_for_matching(slug)
-
-        found_pos = nil
-
-        # 1) Try exact‐line matching after normalization
-        raw_lines.each do |line|
-          if normalize_for_matching(line) == normalized_slug
-            found_pos = raw_text.index(line)
-            break
-          end
-        end
-
-        # 2) If still nil, try "sceneNumber + first word of location" match
-        if found_pos.nil?
-          parts = slug.strip.split(/\s+/, 3)
-          if parts.size == 3
-            scene_num, int_ext, location_rest = parts
-            norm_num  = normalize_for_matching(scene_num)
-            norm_loc1 = normalize_for_matching(location_rest).split(" ").first
-            raw_lines.each do |line|
-              nl = normalize_for_matching(line)
-              if nl.include?(norm_num) && nl.include?(norm_loc1)
-                found_pos = raw_text.index(line)
-                break
-              end
-            end
-          end
-        end
-
-        # 3) If still nil, fall back to a \s+‐style regex
-        if found_pos.nil?
-          re_str = normalized_slug
-                  .gsub(/[-]/, "\\-")    # escape hyphens for the regex
-                  .gsub(/\s+/, "\\s+")   # run of spaces in slug → \s+
-          regex = /#{re_str}/i
-          match_data = raw_text.match(regex)
-          found_pos = match_data.begin(0) if match_data
-        end
+        found_pos = find_slugline_position(raw_text, raw_lines, slug, normalized_slug)
 
         if found_pos.nil?
           Rails.logger.error "[ParseScriptJob] ✗ Could not locate slugline '#{slug}' in raw_text"
@@ -176,223 +155,63 @@ class ParseScriptJob < ApplicationJob
         end
       end
 
-      # 6) Group indices into 4 buckets for concurrent processing
-      buckets = {0 => [], 1 => [], 2 => [], 3 => []}
-      all_indices.each { |idx| buckets[(idx - 1) % 4] << idx }
+      # 6) Process scenes sequentially to avoid race conditions
+      scene_results = {}
 
-      # 7) Shared structures for thread‐safe results
-      scene_results = {}           # idx => parsed_scene_hash
-      results_mutex = Mutex.new
+      all_indices.each do |scene_index|
+        Rails.logger.info "[ParseScriptJob] 🎬 Processing scene #{scene_index}/#{all_indices.size}"
 
-      # 8) Helper: build per‐scene prompt
-      def build_scene_detail_prompt(scene_chunk, start_slug, until_slug, index)
-        <<~PROMPT
-          You are a script‐analysis assistant. You will receive:
+        start_slug = index_to_slug.fetch(scene_index)
+        until_slug = index_to_until_slug.fetch(scene_index)
 
-          1) The full text of a single scene (from one slugline up to—but not including—the next).
-          2) A "start from" slugline that exactly marks the beginning of Scene #{index}.
-          3) An "until" slugline that exactly marks the beginning of the next scene (i.e. the stop marker).
-
-          Your job is to extract **only** the contents belonging to Scene #{index}. Treat everything from "#{start_slug}"
-          up until—but not including—the line "#{until_slug}" as the entire scene text.
-
-          You must return exactly **one JSON object** (no extra text, no markdown fences). Fields:
-
-          {
-            "scene_index": #{index},
-            "scene_number": <number>,
-            "int_ext": "INT. or EXT.",
-            "location": "scene location",
-            "time": "scene time of day",
-            "extra": "extra information about the scene like CONT'D etc if present",
-            "description": "brief description of the scene",
-            "characters": [
-              "character name 1",
-              "character name 2"
-            ],
-            "action_beats": [
-              {
-                "type": "action or dialogue",
-                "characters": [
-                  "character name 1",
-                  "character name 2"
-                ],
-                "indications": "(e.g., O.S., V.O.) if applicable",
-                "content": "text of the action or dialogue"
-              }
-              // …more beats…
-            ]
-          }
-
-
-
-          RULES:
-          • Preserve original casing/spaces. Do not alter or strip anything.
-          • Do not include any lines from the "until" slugline onward—you only have scene_chunk.
-          • If the scene has no dialogue, return "dialogues": [] and still list characters: [].
-          • If the scene has no action, return "actions": [].
-          • The JSON must parse as valid JSON. Do not output any commentary.
-          • Preserve any parentheticals (e.g. `(whispering)`) in the "line".
-
-          ======
-          SCENE TEXT:
-          #{scene_chunk}
-        PROMPT
-      end
-
-      # 9) Spawn 4 threads (one per bucket_key = 0..3)
-      threads = []
-
-      4.times do |bucket_key|
-        threads << Thread.new do
-          buckets[bucket_key].sort.each do |scene_index|
-            start_slug = index_to_slug.fetch(scene_index)
-            until_slug = index_to_until_slug.fetch(scene_index)
-
-            # 9a) Compute start_pos & end_pos in raw_text
-            start_pos = slug_offset_map[scene_index]
-            if start_pos.nil? || start_pos == 0
-              Rails.logger.warn "[ParseScriptJob] ⚠️ Using fallback start_pos=0 for scene #{scene_index}"
-            end
-
-            end_pos = if until_slug == "END OF SCRIPT"
-                        raw_text.length
-                      else
-                        # Locate the next slugline in a whitespace‐normalized way:
-                        next_slug      = until_slug.strip.gsub(/\s+/, " ")
-                        found_end_pos  = nil
-                        raw_lines.each do |line|
-                          if line.strip.gsub(/\s+/, " ") == next_slug
-                            found_end_pos = raw_text.index(line)
-                            break
-                          end
-                        end
-                        found_end_pos || raw_text.length
+        # Extract scene content
+        start_pos = slug_offset_map[scene_index]
+        end_pos = if until_slug == "END OF SCRIPT"
+                    raw_text.length
+                  else
+                    next_slug = until_slug.strip.gsub(/\s+/, " ")
+                    found_end_pos = nil
+                    raw_lines.each do |line|
+                      if line.strip.gsub(/\s+/, " ") == next_slug
+                        found_end_pos = raw_text.index(line)
+                        break
                       end
+                    end
+                    found_end_pos || raw_text.length
+                  end
 
-            scene_chunk = raw_text[start_pos...end_pos]
-            if scene_chunk.blank?
-              Rails.logger.error "[ParseScriptJob] ✗ scene_chunk blank for scene #{scene_index}"
-              next
-            end
+        scene_chunk = raw_text[start_pos...end_pos]
+        if scene_chunk.blank?
+          Rails.logger.error "[ParseScriptJob] ✗ scene_chunk blank for scene #{scene_index}"
+          scene_results[scene_index] = { "index" => scene_index, "error" => "empty_scene_content" }
+          next
+        end
 
-            prompt = build_scene_detail_prompt(scene_chunk, start_slug, until_slug, scene_index)
+        # Process scene with retries
+        parsed_scene = process_scene_with_retries(
+          client, scene_chunk, start_slug, until_slug, scene_index
+        )
 
-            # 9b) Call OpenAI with a retry loop
-            raw_content  = nil
-            retries_left = 2
-
-            begin
-              response = client.chat(
-                parameters: {
-                  model:       "gpt-4.1-nano-2025-04-14",
-                  messages:    [{ role: "user", content: prompt }],
-                  max_tokens:  16_384,
-                  temperature: 0
-                }
-              )
-
-              Rails.logger.info "[ParseScriptJob] 📝 Scene #{scene_index} API response received"
-
-              # Extract content from response - ruby-openai gem returns response directly as hash
-              raw_content = response.dig("choices", 0, "message", "content")
-
-              if raw_content.blank?
-                Rails.logger.error "[ParseScriptJob] ✗ Scene #{scene_index} returned empty content"
-                next   # skip this scene_index entirely
-              end
-
-              # 9c) Try to parse that JSON for the first time
-              parsed_scene = JSON.parse(raw_content)
-
-            rescue JSON::ParserError => parse_err
-              Rails.logger.error "[ParseScriptJob] ✗ JSON parse failed for scene #{scene_index}: #{parse_err.message}"
-              Rails.logger.error "→ raw_content was: #{raw_content.inspect}"
-
-              #  If it was malformed, ask GPT to "just fix the missing brace/bracket"
-              retry_prompt = <<~TXT
-                The JSON you returned (for scene #{scene_index}) was:
-                #{raw_content}
-
-                It looks like you may have truncated the closing braces or square brackets, making it invalid JSON.
-                Please return **only** the corrected JSON object (with keys "index", "scene_number", "location", "time_of_day", "characters", "actions", "dialogues") by adding the missing `}` or `]`. Do not change any other content.
-              TXT
-
-              begin
-                fix_response = client.chat(
-                  parameters: {
-                    model:       "gpt-4.1-nano-2025-04-14",
-                    messages:    [{ role: "user", content: retry_prompt }],
-                    max_tokens:  1_000,
-                    temperature: 0
-                  }
-                )
-
-                # Extract fixed content from response
-                fixed_content = fix_response.dig("choices", 0, "message", "content")
-
-                if fixed_content.present?
-                  parsed_scene = JSON.parse(fixed_content)
-                  Rails.logger.info "[ParseScriptJob] ✅ JSON fix successful for scene #{scene_index}"
-                else
-                  Rails.logger.error "[ParseScriptJob] ✗ Fix response empty for scene #{scene_index}"
-                  next
-                end
-              rescue JSON::ParserError => e2
-                Rails.logger.error "[ParseScriptJob] ✗ JSON still invalid after retry for scene #{scene_index}: #{e2.message}"
-                Rails.logger.error "→ fixed attempt: #{fixed_content.inspect}"
-                next   # skip this scene_index entirely
-              rescue => fix_error
-                Rails.logger.error "[ParseScriptJob] ✗ Fix API call failed for scene #{scene_index}: #{fix_error.class}: #{fix_error.message}"
-                next
-              end
-
-            rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout => e
-              if retries_left > 0
-                retries_left -= 1
-                Rails.logger.warn "[ParseScriptJob] ⚠️ Network error for scene #{scene_index}, retrying (#{retries_left} left): #{e.class}"
-                sleep(2 + rand(3)) # Add some jitter to avoid thundering herd
-                retry
-              else
-                Rails.logger.error "[ParseScriptJob] ✗ Network failed twice for scene #{scene_index}: #{e.class}: #{e.message}"
-                next   # skip this scene_index entirely
-              end
-            rescue => e
-              Rails.logger.error "[ParseScriptJob] ✗ Unexpected error for scene #{scene_index}: #{e.class}: #{e.message}"
-              Rails.logger.error e.backtrace.join("\n")
-              next   # skip this scene_index entirely
-            end
-
-            # 9d) If we got a valid parsed_scene, store it
-            if parsed_scene
-              results_mutex.synchronize do
-                scene_results[scene_index] = parsed_scene
-              end
-              Rails.logger.info "[ParseScriptJob] ✅ Scene #{scene_index} parsed successfully"
-            end
-          end
+        if parsed_scene
+          scene_results[scene_index] = parsed_scene
+          Rails.logger.info "[ParseScriptJob] ✅ Scene #{scene_index} parsed successfully"
+        else
+          scene_results[scene_index] = { "index" => scene_index, "error" => "parsing_failed" }
+          Rails.logger.error "[ParseScriptJob] ✗ Failed to parse scene #{scene_index}"
         end
       end
 
-      # 10) Wait for threads to finish
-      threads.each(&:join)
-
-      # 11) Build final sorted array
+      # 7) Build final sorted array
       final_array = all_indices.map do |idx|
-        if scene_results.key?(idx)
-          scene_results[idx]
-        else
-          { "index" => idx, "error" => "parsing_failed_or_missing" }
-        end
+        scene_results.fetch(idx, { "index" => idx, "error" => "missing_result" })
       end
 
       final_payload = { "scenes" => final_array }
-      Rails.logger.info "[ParseScriptJob] 🏁 Final combined scenes JSON for Script##{script_id}: #{JSON.pretty_generate(final_payload)}"
+      Rails.logger.info "[ParseScriptJob] 🏁 Final combined scenes JSON for Script##{script_id} with #{final_array.size} scenes"
 
-      # === SAVE JSON AND STOP ===
+      # === SAVE JSON AND IMPORT ===
       script.update!(scenes_data_json: final_payload)
-      # Now this job's responsibility is done; it does NOT import into "scenes" or "action_beats."
-      Rails.logger.info "[ParseScriptJob] ✔️ JSON stored to script.scenes_data_json; import step is separate."
+      Rails.logger.info "[ParseScriptJob] ✔️ JSON stored to script.scenes_data_json"
 
       # === INSTANTLY HAND OFF TO ScriptJsonImporter ===
       begin
@@ -422,12 +241,12 @@ class ParseScriptJob < ApplicationJob
             error: "ScriptJsonImporter failed: #{e.class}: #{e.message}"
           )
         end
-        # You can choose to re‐raise here if you want the job to be marked as failed:
-        # raise
+        raise
       end
 
     rescue => e
       Rails.logger.error "[ParseScriptJob] ✗ #{e.class}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
 
       # Update script_parse with error if we have a tracking record
       if script_parse
@@ -439,5 +258,218 @@ class ParseScriptJob < ApplicationJob
 
       raise
     end
+  end
+
+  private
+
+  def clean_json_response(raw_response)
+    # Remove markdown formatting and extra text
+    cleaned = raw_response.strip
+
+    # Extract JSON content between first { and last }
+    start_idx = cleaned.index('{')
+    end_idx = cleaned.rindex('}')
+
+    if start_idx && end_idx && start_idx < end_idx
+      cleaned = cleaned[start_idx..end_idx]
+    end
+
+    # Clean up common formatting issues
+    cleaned.gsub(/```json\s*/, '')
+           .gsub(/```\s*$/, '')
+           .gsub(/^\s*```/, '')
+           .strip
+  end
+
+  def normalize_for_matching(str)
+    str
+      .gsub(/['']/, "'")                      # map curly apostrophes → straight
+      .gsub(/[–—‒]/, "-")                     # normalize any dash → hyphen
+      .gsub(/\b(INT)\.{1,}/, '\1')            # collapse any run of "." after INT
+      .gsub(/\b(EXT)\.{1,}/, '\1')            # collapse any run of "." after EXT
+      .gsub(/[^A-Za-z0-9\-' ]/, " ")          # keep only letters, digits, hyphen, apostrophe, space
+      .strip
+      .gsub(/\s+/, " ")
+  end
+
+  def find_slugline_position(raw_text, raw_lines, slug, normalized_slug)
+    # 1) Try exact‐line matching after normalization
+    raw_lines.each do |line|
+      if normalize_for_matching(line) == normalized_slug
+        return raw_text.index(line)
+      end
+    end
+
+    # 2) Try "sceneNumber + first word of location" match
+    parts = slug.strip.split(/\s+/, 3)
+    if parts.size == 3
+      scene_num, int_ext, location_rest = parts
+      norm_num  = normalize_for_matching(scene_num)
+      norm_loc1 = normalize_for_matching(location_rest).split(" ").first
+      raw_lines.each do |line|
+        nl = normalize_for_matching(line)
+        if nl.include?(norm_num) && nl.include?(norm_loc1)
+          return raw_text.index(line)
+        end
+      end
+    end
+
+    # 3) Fall back to regex search
+    re_str = normalized_slug
+            .gsub(/[-]/, "\\-")    # escape hyphens for the regex
+            .gsub(/\s+/, "\\s+")   # run of spaces in slug → \s+
+    regex = /#{re_str}/i
+    match_data = raw_text.match(regex)
+    match_data&.begin(0)
+  end
+
+  def process_scene_with_retries(client, scene_chunk, start_slug, until_slug, scene_index)
+    retries_left = 3
+
+    while retries_left > 0
+      begin
+        prompt = build_scene_detail_prompt(scene_chunk, start_slug, until_slug, scene_index)
+
+        response = client.chat(
+          parameters: {
+            model:       "gpt-4o",  # Use more reliable model
+            messages:    [{ role: "user", content: prompt }],
+            max_tokens:  16_384,
+            temperature: 0
+          }
+        )
+
+        raw_content = response.dig("choices", 0, "message", "content")
+
+        if raw_content.blank?
+          Rails.logger.error "[ParseScriptJob] ✗ Scene #{scene_index} returned empty content"
+          retries_left -= 1
+          next
+        end
+
+        # Log the raw response for debugging
+        Rails.logger.debug "[ParseScriptJob] 🔍 Scene #{scene_index} raw GPT response: #{raw_content}"
+
+        # Clean and parse JSON
+        cleaned_content = clean_json_response(raw_content)
+        parsed_scene = JSON.parse(cleaned_content)
+
+        # Log parsed structure for debugging
+        Rails.logger.debug "[ParseScriptJob] 🔍 Scene #{scene_index} parsed fields: #{parsed_scene.keys.inspect}"
+
+        # Validate required fields
+        if validate_scene_structure(parsed_scene, scene_index)
+          return parsed_scene
+        else
+          retries_left -= 1
+          Rails.logger.warn "[ParseScriptJob] ⚠️ Scene #{scene_index} validation failed, retrying (#{retries_left} left)"
+          Rails.logger.warn "[ParseScriptJob] 🔍 Failed validation for: #{parsed_scene.inspect}"
+        end
+
+      rescue JSON::ParserError => parse_err
+        Rails.logger.error "[ParseScriptJob] ✗ JSON parse failed for scene #{scene_index}: #{parse_err.message}"
+        retries_left -= 1
+
+        if retries_left > 0
+          Rails.logger.info "[ParseScriptJob] 🔄 Retrying scene #{scene_index} (#{retries_left} left)"
+          sleep(1)
+        end
+
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout => e
+        retries_left -= 1
+        Rails.logger.warn "[ParseScriptJob] ⚠️ Network error for scene #{scene_index}, retrying (#{retries_left} left): #{e.class}"
+        sleep(2 + rand(3)) if retries_left > 0
+
+      rescue => e
+        Rails.logger.error "[ParseScriptJob] ✗ Unexpected error for scene #{scene_index}: #{e.class}: #{e.message}"
+        retries_left -= 1
+      end
+    end
+
+    nil # All retries exhausted
+  end
+
+  def validate_scene_structure(parsed_scene, scene_index)
+    return false unless parsed_scene.is_a?(Hash)
+
+    required_fields = %w[scene_index scene_number int_ext location time]
+    required_fields.each do |field|
+      unless parsed_scene[field].present?
+        Rails.logger.error "[ParseScriptJob] ✗ Scene #{scene_index} missing required field: #{field}"
+        return false
+      end
+    end
+
+    # Validate action_beats is an array
+    unless parsed_scene["action_beats"].is_a?(Array)
+      Rails.logger.error "[ParseScriptJob] ✗ Scene #{scene_index} action_beats is not an array"
+      return false
+    end
+
+    # Validate characters is an array
+    unless parsed_scene["characters"].is_a?(Array)
+      Rails.logger.error "[ParseScriptJob] ✗ Scene #{scene_index} characters is not an array"
+      return false
+    end
+
+    true
+  end
+
+  def build_scene_detail_prompt(scene_chunk, start_slug, until_slug, index)
+    <<~PROMPT
+      You are a script analysis assistant. Extract scene details from this single scene.
+
+      **CRITICAL: Return VALID JSON only. No markdown, no extra text, no explanations.**
+
+      **EXACT FORMAT REQUIRED:**
+      {
+        "scene_index": #{index},
+        "scene_number": <extract number from slugline or use #{index}>,
+        "int_ext": "<INT. or EXT. or INT./EXT.>",
+        "location": "<location name>",
+        "time": "<time of day>",
+        "extra": "<CONT'D or other info if present>",
+        "description": "<brief scene description>",
+        "characters": ["CHARACTER1", "CHARACTER2"],
+        "action_beats": [
+          {
+            "type": "action",
+            "characters": ["CHARACTER1"],
+            "indications": "",
+            "content": "Action description"
+          },
+          {
+            "type": "dialogue",
+            "characters": ["CHARACTER2"],
+            "indications": "(O.S.)",
+            "content": "Line of dialogue"
+          }
+        ]
+      }
+
+      **CRITICAL REQUIREMENTS:**
+      • ALL fields are MANDATORY - never omit any field
+      • If time is unclear, use "DAY" as default
+      • If location is unclear, extract best guess from slugline
+      • If no characters found, use empty array []
+      • If no action beats, use empty array []
+      • Always include "extra" field (use "" if empty)
+      • Always include "description" field (use brief summary if unclear)
+
+      **FIELD EXTRACTION RULES:**
+      • scene_number: Extract number from "#{start_slug}" or use #{index}
+      • int_ext: Extract "INT." or "EXT." or "INT./EXT." from slugline
+      • location: Extract location name from slugline
+      • time: Extract time from slugline (DAY, NIGHT, MORNING, etc.) - DEFAULT to "DAY" if unclear
+      • extra: Extract any additional info like "CONT'D" - use "" if none
+      • description: Brief 1-2 sentence summary of what happens in scene
+      • characters: All characters who speak or are mentioned by name
+      • type: "action" or "dialogue" only
+      • Split scene into logical action/dialogue beats
+      • Keep original text content without modification
+
+      **SCENE TEXT FROM "#{start_slug}" UNTIL "#{until_slug}":**
+      #{scene_chunk}
+    PROMPT
   end
 end
