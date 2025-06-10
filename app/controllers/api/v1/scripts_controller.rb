@@ -98,6 +98,33 @@ module Api
         }
       end
 
+      # POST /api/v1/productions/:production_id/scripts/:id/parse_with_agents
+      def parse_with_agents
+        script = @production.scripts.find(params[:id])
+
+        # Create ScriptParse record to track the job (same as regular parser)
+        script_parse = @production.script_parses.create!(
+          job_id: SecureRandom.uuid,
+          script: script,
+          status: 'pending'
+        )
+
+        # Queue the agentic parsing job with the script_parse ID
+        AgenticScriptParserJob.perform_later(script.id, script_parse.id)
+
+        # Return job information (same format as regular parser)
+        render json: {
+          job_id: script_parse.job_id,
+          status: script_parse.status,
+          message: 'Agentic script parsing job has been queued'
+        }, status: :accepted
+      rescue ActiveRecord::RecordNotFound
+        render json: { error: "Script not found" }, status: :not_found
+      rescue => e
+        Rails.logger.error "Error queuing agentic parsing: #{e.message}"
+        render json: { error: "Failed to queue parsing job" }, status: :internal_server_error
+      end
+
       # PUT /api/v1/productions/{production_id}/scripts/{id}
       def update
         if @script.update(script_params)

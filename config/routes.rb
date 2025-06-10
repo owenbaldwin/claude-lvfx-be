@@ -43,6 +43,7 @@ Rails.application.routes.draw do
         # Scripts routes
         resources :scripts, only: [:index, :show, :create] do
           post :parse, on: :member
+          post :parse_with_agents, on: :member
           get 'parse/:job_id/status', action: :parse_status, on: :member
           get 'parse/:job_id/results', action: :parse_results, on: :member
         end
