@@ -1,9 +1,10 @@
 module Api
   module V1
     class ShotsController < ApplicationController
-      before_action :set_action_beat, except: [:production_shots]
+      before_action :set_action_beat, except: [:production_shots, :generate_assumptions]
       before_action :set_shot, only: [:show, :update, :destroy]
       before_action :set_production_for_production_shots, only: [:production_shots]
+      before_action :set_production_for_generate_assumptions, only: [:generate_assumptions]
 
       # GET /api/v1/productions/{production_id}/shots
       def production_shots
@@ -70,9 +71,49 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/productions/{production_id}/shots/generate_assumptions
+      def generate_assumptions
+        shot_ids = params[:shot_ids]
+
+        # Validate shot_ids parameter
+        unless shot_ids.is_a?(Array) && shot_ids.present?
+          render json: { error: 'shot_ids must be a non-empty array' }, status: :bad_request
+          return
+        end
+
+        # Validate that all shots exist and belong to the current production
+        shots = @production.shots.where(id: shot_ids)
+        if shots.count != shot_ids.count
+          render json: { error: 'One or more shots not found or not accessible' }, status: :not_found
+          return
+        end
+
+        # Get action beat description context (from the first shot's action beat)
+        first_shot = shots.first
+        action_beat_description = first_shot&.action_beat&.text
+
+        # Enqueue the background job
+        GenerateShotAssumptionsJob.perform_later(
+          production_id: @production.id,
+          shot_ids: shot_ids,
+          context: action_beat_description
+        )
+
+        # Return HTTP 202 with the shot_ids for optimistic rendering
+        render json: {
+          message: 'Assumption generation started',
+          shot_ids: shot_ids,
+          status: 'processing'
+        }, status: :accepted
+      end
+
       private
 
       def set_production_for_production_shots
+        @production = @current_user.productions.find(params[:production_id])
+      end
+
+      def set_production_for_generate_assumptions
         @production = @current_user.productions.find(params[:production_id])
       end
 
