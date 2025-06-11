@@ -8,4 +8,5 @@ class Complexity < ApplicationRecord
 
   validates :level, presence: true
   validates :description, presence: true
+  validates :key, presence: true, uniqueness: { scope: :production_id }
 end

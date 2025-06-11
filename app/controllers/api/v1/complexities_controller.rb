@@ -56,7 +56,7 @@ module Api
       end
 
       def complexity_params
-        params.require(:complexity).permit(:level, :description)
+        params.require(:complexity).permit(:key, :level, :description)
       end
     end
   end

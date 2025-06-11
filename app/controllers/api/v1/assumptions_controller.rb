@@ -70,7 +70,7 @@ module Api
       end
 
       def assumption_params
-        params.require(:assumption).permit(:name, :description, :complexity_id)
+        params.require(:assumption).permit(:name, :description, :category, :complexity_id)
       end
     end
   end
