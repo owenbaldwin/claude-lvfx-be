@@ -44,6 +44,9 @@ gem "jwt"
 # For API serialization
 gem "active_model_serializers"
 
+# Multi-agent AI system - using existing ruby-openai gem
+# gem "active_agent", github: "activeagents/active_agent"
+
 # for PDF→text
 gem 'pdf-reader'
 
