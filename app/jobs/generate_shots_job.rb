@@ -55,7 +55,7 @@ class GenerateShotsJob < ApplicationJob
           parameters: {
             model: "gpt-4.1-nano-2025-04-14",
             messages: [{ role: "user", content: prompt }],
-            max_tokens: 32_768,
+            max_tokens: 32768,
             temperature: 0
           }
         )
@@ -101,7 +101,7 @@ class GenerateShotsJob < ApplicationJob
             parameters: {
               model: "gpt-4.1-nano-2025-04-14",
               messages: [{ role: "user", content: retry_prompt }],
-              max_tokens: 16_384,
+              max_tokens: 32768,
               temperature: 0
             }
           )

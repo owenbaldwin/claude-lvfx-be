@@ -11,8 +11,8 @@ end
 
 # Configuration constants for the multi-agent system
 module MultiAgentConfig
-  DEFAULT_MODEL = "gpt-4"
+  DEFAULT_MODEL = "gpt-4.1-nano-2025-04-14"
   DEFAULT_TEMPERATURE = 0.1  # Lower temperature for more consistent parsing
-  DEFAULT_MAX_TOKENS = 4000   # Reasonable token limit for script parsing
+  DEFAULT_MAX_TOKENS = 32768   # Reasonable token limit for script parsing
   MAX_RETRIES = 3            # Maximum retries for failed operations
 end

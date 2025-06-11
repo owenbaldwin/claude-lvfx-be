@@ -14,7 +14,7 @@ class SceneExtractorAgent < ApplicationAgent
 
     prompt = build_scene_extraction_prompt(scene_content, slugline, scene_number)
 
-    Rails.logger.info "[SceneExtractorAgent] Making OpenAI API call with model: #{@model}"
+    Rails.logger.info "[SceneExtractorAgent] Making OpenAI API call with GPT-4.1 nano"
     Rails.logger.info "[SceneExtractorAgent] Prompt length: #{prompt.length} characters"
 
     response = call_openai(prompt)
