@@ -36,6 +36,9 @@ Rails.application.routes.draw do
         # Production shots route
         get 'shots', to: 'shots#production_shots'
 
+        # Shot assumptions generation route
+        post 'shots/generate_assumptions', to: 'shots#generate_assumptions'
+
         # Unsequenced scenes route
         get 'scenes/unsequenced', to: 'scenes#unsequenced'
         put 'scenes/:id/update_unsequenced', to: 'scenes#update_unsequenced'
