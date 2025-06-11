@@ -55,21 +55,29 @@ class ShotAssumptionsGeneratorService
       #{existing_assumptions.to_json}
 
       INSTRUCTIONS:
-      Analyze each shot and return a JSON object mapping each shot ID to an array of assumption objects.
+      Analyse each shot and return a JSON object mapping each shot ID to an array of Visual Effects (VFX) assumption objects.
 
-      For each shot, determine what assumptions are needed based on:
+      For each shot, determine what VFX assumptions are needed based on:
       1. The shot description
       2. The action beat context
       3. Technical requirements
       4. Visual effects needs
       5. Equipment requirements
+      6. The VFX techniques that are most likely to be used
 
-      For each assumption, you can either:
+      For each VFX assumption, you can either:
       - Reference an existing assumption by ID if it's applicable
-      - Create a new assumption with name, description, category, complexity_level, and complexity_description
+      - Create a new VFX assumption with name, description, category, complexity_level, and complexity_description
 
-      Categories should be one of: technical, creative, logistical, equipment, vfx, lighting, sound
-      Complexity levels should be: low, medium, high, extreme
+      Categories should be one of: technical, creative, logistical, equipment, vfx, lighting
+      Complexity levels should be: very low, low, medium, high, very high
+      Assumptions should be specific to the shot and not general to the production
+      Assumptions should be specific to VFX, not other categories or departments. Visual Effects (VFX) only
+      Don't create assumptions that are not specific to VFX
+      Don't create assumptions that are not specific to the shot
+      Don't create assumptions for the sake of it, only create assumptions that are needed and relevant to the shot
+      Use existing assumptions where possible, only create new assumptions if none of the existing ones are applicable
+      Create as many or as few assumptions as needed, depending on the shot and the VFX requirements. It might be only one or two, or it might be many.
 
       Return ONLY valid JSON in this format:
       {
