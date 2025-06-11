@@ -199,9 +199,9 @@ class SceneVerifierAgent < ApplicationAgent
     end.join("\n")
 
     <<~PROMPT
-      You are a script verification expert. Your task is to verify that the extracted scene data reasonably represents the scenes in the provided script excerpt.
+      You are a script verification expert. Your task is to verify that the extracted scene data matches the scenes in the provided script excerpt exactly.
 
-      Be LENIENT in your verification - focus on major issues only, not minor formatting differences.
+      Be STRICT in your verification - focus on exact matches, not minor formatting differences.
 
       EXTRACTED SCENES TO VERIFY:
       #{scenes_summary}
@@ -210,21 +210,20 @@ class SceneVerifierAgent < ApplicationAgent
       #{condensed_script}
 
       Please verify:
-      1. Are the majority of extracted scene headers present in the script?
-      2. Do the INT/EXT, LOCATION, and TIME values reasonably match what's in the script?
-      3. Are there any major structural issues?
+      1. Are the extracted scene headers present in the script?
+      2. Do the scene number, INT/EXT, LOCATION, and TIME values match exactly what's in the script?
+      3. Is anything missing from the extracted scenes when compared to the script?
 
-      Be lenient with minor formatting differences, slight location name variations, or missing scenes due to script excerpt limitations.
 
       Respond with valid JSON in this format:
       {
         "success": true/false,
-        "errors": ["only major errors that would affect usability"],
+        "errors": ["any errors that would affect usability"],
         "missing_scenes": ["only clearly missing scenes"],
         "notes": "any additional observations"
       }
 
-      If the majority of scenes are reasonable, return success: true even if there are minor issues.
+      If the scenes are exactly as they should be, return success: true (only if there are no errors or missing scenes).
     PROMPT
   end
 
