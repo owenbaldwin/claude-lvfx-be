@@ -1,5 +1,5 @@
-# Multi-Agent Script Parsing System Test
-puts "🤖 Testing Multi-Agent Script Parsing System"
+# Multi-Agent Script Parsing System Test - GPT-4.1 Nano
+puts "🤖 Testing Multi-Agent Script Parsing System (GPT-4.1 Nano)"
 
 # Check if OpenAI API key is configured
 if ENV['OPENAI_API_KEY'].blank?
@@ -33,7 +33,7 @@ puts "✅ Using Production: #{production.title} (ID: #{production.id})"
 puts "✅ Using Script: #{script.title} (ID: #{script.id})"
 
 # Test the multi-agent parsing system
-puts "\n🔄 Testing multi-agent parsing system..."
+puts "\n🔄 Testing multi-agent parsing system with GPT-4.1 nano..."
 
 begin
   # Create or find existing script parse
@@ -48,7 +48,7 @@ begin
   puts "✅ Using ScriptParse record: #{script_parse.job_id}"
 
   # Test individual agents
-  puts "\n🧪 Testing individual agents..."
+  puts "\n🧪 Testing individual agents with GPT-4.1 nano..."
 
   # Test text extraction
   begin
@@ -57,6 +57,7 @@ begin
       "INT. TEST SCENE - DAY\n\nThis is a test scene for agent parsing."
 
     puts "✅ Text extraction: #{text_content.length} characters"
+    puts "📈 Full script will be processed in one request (no chunking)"
   rescue => e
     puts "⚠️  Text extraction warning: #{e.message}"
     text_content = "INT. TEST SCENE - DAY\n\nThis is a test scene for agent parsing."
@@ -66,7 +67,7 @@ begin
   begin
     slugline_agent = SluglineExtractorAgent.new
     sluglines = slugline_agent.extract_sluglines_from_script(text_content)
-    puts "✅ SluglineExtractorAgent: Found #{sluglines&.length || 0} sluglines"
+    puts "✅ SluglineExtractorAgent: Found #{sluglines&.length || 0} sluglines (no chunking used)"
   rescue => e
     puts "❌ SluglineExtractorAgent error: #{e.message}"
   end
@@ -86,7 +87,7 @@ begin
   end
 
   # Start the full parsing job
-  puts "\n🔄 Starting full parsing job..."
+  puts "\n🔄 Starting full parsing job with GPT-4.1 nano..."
 
   # Reset script parse status
   script_parse.update!(status: 'pending', error: nil, results_json: nil)
@@ -94,6 +95,7 @@ begin
   # Start the parsing job
   job = AgenticScriptParserJob.perform_later(script_parse.id)
   puts "✅ Queued AgenticScriptParserJob"
+  puts "🚀 All agents will use GPT-4.1 nano with full script processing"
 
   # Wait a moment and check status
   sleep(3)
@@ -112,7 +114,7 @@ begin
     puts "   - Verification passed: #{script_parse.results_json['verification_passed'] ? 'Yes' : 'No'}"
   end
 
-  puts "\n🎉 Multi-agent parsing test completed!"
+  puts "\n🎉 Multi-agent parsing test completed with GPT-4.1 nano!"
   puts "   You can check the results by calling:"
   puts "   GET /api/v1/productions/#{production.id}/scripts/#{script.id}/parse_status"
 

@@ -1,16 +1,11 @@
 class SluglineExtractorAgent < ApplicationAgent
   def extract_sluglines(script_text)
     Rails.logger.info "[SluglineExtractorAgent] Starting slugline extraction"
-
-    # Check if script is too large and needs chunking
-    if script_text.length > 40000  # Roughly 10k tokens
-      Rails.logger.info "[SluglineExtractorAgent] Script is large (#{script_text.length} chars), using chunking approach"
-      return extract_sluglines_chunked(script_text)
-    end
+    Rails.logger.info "[SluglineExtractorAgent] Script length: #{script_text.length} characters"
 
     prompt = build_slugline_prompt(script_text)
 
-    Rails.logger.info "[SluglineExtractorAgent] Making OpenAI API call with model: #{@model}"
+    Rails.logger.info "[SluglineExtractorAgent] Making OpenAI API call with GPT-4.1 nano"
     Rails.logger.info "[SluglineExtractorAgent] Prompt length: #{prompt.length} characters"
 
     response = call_openai(prompt)
@@ -34,54 +29,6 @@ class SluglineExtractorAgent < ApplicationAgent
   end
 
   private
-
-  def extract_sluglines_chunked(script_text)
-    Rails.logger.info "[SluglineExtractorAgent] Processing script in chunks"
-
-    # Split script into smaller chunks of ~15k characters (roughly 3.5k tokens)
-    chunk_size = 15000
-    chunks = []
-
-    (0...script_text.length).step(chunk_size) do |i|
-      chunk = script_text[i, chunk_size]
-      chunks << chunk
-    end
-
-    Rails.logger.info "[SluglineExtractorAgent] Split script into #{chunks.length} chunks"
-
-    all_sluglines = []
-
-    chunks.each_with_index do |chunk, index|
-      Rails.logger.info "[SluglineExtractorAgent] Processing chunk #{index + 1}/#{chunks.length}"
-
-      prompt = build_slugline_prompt(chunk)
-      response = call_openai(prompt)
-
-      if response && !response.empty?
-        # Extract content from OpenStruct response
-        response_content = response.respond_to?(:content) ? response.content : response.to_s
-
-        if response_content && !response_content.empty?
-          chunk_sluglines = parse_sluglines_response(response_content)
-          all_sluglines.concat(chunk_sluglines)
-          Rails.logger.info "[SluglineExtractorAgent] Chunk #{index + 1} found #{chunk_sluglines.length} sluglines"
-        else
-          Rails.logger.warn "[SluglineExtractorAgent] Chunk #{index + 1} returned empty content"
-        end
-      else
-        Rails.logger.warn "[SluglineExtractorAgent] Chunk #{index + 1} returned empty response"
-      end
-
-      # Small delay between API calls to respect rate limits
-      sleep(0.5) if index < chunks.length - 1
-    end
-
-    # Remove duplicates (sluglines that might appear across chunk boundaries)
-    unique_sluglines = all_sluglines.uniq { |s| s[:text]&.strip&.upcase }
-
-    Rails.logger.info "[SluglineExtractorAgent] Total unique sluglines found: #{unique_sluglines.length}"
-    return unique_sluglines
-  end
 
   def build_slugline_prompt(script_text)
     <<~PROMPT

@@ -74,9 +74,9 @@ class ParseScriptJob < ApplicationJob
 
       slug_response = client.chat(
         parameters: {
-          model:       "gpt-4o",  # Use more reliable model
+          model:       "gpt-4.1-nano-2025-04-14",  # Use more reliable model
           messages:    [{ role: "user", content: sluglines_prompt }],
-          max_tokens:  16_384,
+          max_tokens:  32768,
           temperature: 0
         }
       )
@@ -332,9 +332,9 @@ class ParseScriptJob < ApplicationJob
 
         response = client.chat(
           parameters: {
-            model:       "gpt-4o",  # Use more reliable model
+            model:       "gpt-4.1-nano-2025-04-14",  # Use more reliable model
             messages:    [{ role: "user", content: prompt }],
-            max_tokens:  16_384,
+            max_tokens:  32768,
             temperature: 0
           }
         )

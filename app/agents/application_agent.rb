@@ -9,7 +9,7 @@ class ApplicationAgent
 
   protected
 
-  def call_openai(prompt, temperature: 0.1, max_tokens: 4000, model: "gpt-4")
+  def call_openai(prompt, temperature: 0.1, max_tokens: 32768, model: "gpt-4.1-nano-2025-04-14")
     log_debug "Making OpenAI API call with model: #{model}"
     log_debug "Prompt length: #{prompt.length} characters"
 
