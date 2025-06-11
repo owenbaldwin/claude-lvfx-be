@@ -51,11 +51,12 @@ class SceneVerifierAgent < ApplicationAgent
       end
     end
 
-    # Check for duplicate scene numbers
+    # Check for duplicate scene numbers - but treat as warnings, not errors
+    # Duplicate scene numbers are common in scripts (e.g., "8 CONTINUED", split scenes)
     scene_numbers = extracted_scenes.map { |s| s["scene_number"] }.compact
     duplicates = scene_numbers.group_by(&:itself).select { |_, v| v.size > 1 }.keys
     if duplicates.any?
-      errors << "Duplicate scene numbers found: #{duplicates.join(', ')}"
+      warnings << "Duplicate scene numbers found (common in scripts): #{duplicates.join(', ')}"
     end
 
     # Determine success based on errors (warnings are okay)
