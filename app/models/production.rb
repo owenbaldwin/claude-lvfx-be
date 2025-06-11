@@ -17,4 +17,8 @@ class Production < ApplicationRecord
   has_many :script_parses, dependent: :destroy
 
   validates :title, presence: true
+
+  def owner
+    production_users.find_by(role: 'owner')&.user
+  end
 end
