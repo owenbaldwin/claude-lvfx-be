@@ -102,24 +102,83 @@ class SceneExtractorAgent < ApplicationAgent
 
     Rails.logger.debug "[SceneExtractorAgent] Comparing: '#{normalized_line1}' vs '#{normalized_target}'"
 
-    return normalized_line1 == normalized_target
+    # First try exact match
+    return true if normalized_line1 == normalized_target
+
+    # Try fuzzy matching - check if they contain the same key components
+    line1_components = extract_key_components(line1)
+    target_components = extract_key_components(target_slugline.is_a?(Hash) ? target_slugline[:text] || target_slugline["text"] : target_slugline.to_s)
+
+    # Match if they have the same INT/EXT, location, and time components
+    return line1_components[:int_ext] == target_components[:int_ext] &&
+           line1_components[:location] == target_components[:location] &&
+           line1_components[:time] == target_components[:time]
+  end
+
+  def extract_key_components(slugline_text)
+    text = slugline_text.to_s.strip.upcase
+
+    # Extract INT/EXT
+    int_ext = if text.match(/\bINT\b/)
+                "INT"
+              elsif text.match(/\bEXT\b/)
+                "EXT"
+              else
+                "INT" # default
+              end
+
+    # Extract location and time
+    location = ""
+    time = "DAY" # default
+
+    # Remove scene number and INT/EXT prefix first
+    clean_text = text.gsub(/^\d+[A-Z]?\s*\.?\s*/, '').gsub(/^(?:INT|EXT)\.?\s*/, '')
+
+    # Try different patterns to extract location and time
+    time_words = %w[DAY NIGHT MORNING EVENING DAWN DUSK AFTERNOON SUNSET SUNRISE]
+    time_pattern = time_words.join('|')
+
+    # Pattern 1: Location - Time (with dash/hyphen separator)
+    if match = clean_text.match(/^(.+?)\s*[-–]\s*(#{time_pattern})/i)
+      location = match[1].strip.gsub(/\s+/, ' ')
+      time = match[2].strip
+    # Pattern 2: Location Time (space separated, time at end)
+    elsif match = clean_text.match(/^(.+?)\s+(#{time_pattern})$/i)
+      location = match[1].strip.gsub(/\s+/, ' ')
+      time = match[2].strip
+    # Pattern 3: Just location, no time specified
+    elsif clean_text.present?
+      location = clean_text.strip.gsub(/\s+/, ' ')
+      # Check if the location ends with a time word
+      if match = location.match(/^(.+?)\s+(#{time_pattern})$/i)
+        location = match[1].strip
+        time = match[2].strip
+      end
+    end
+
+    {
+      int_ext: int_ext,
+      location: location,
+      time: time
+    }
   end
 
   def normalize_slugline_for_matching(slugline)
-    # Remove scene numbers, extra spaces, convert to uppercase, and standardize format
+    # More robust normalization that preserves key structure
     normalized = slugline.to_s.strip.upcase
 
-    # Remove leading scene numbers (e.g., "1     EXT." -> "EXT.")
-    normalized = normalized.gsub(/^\d+\s+/, '')
+    # Remove scene numbers from the start - handle both "1. EXT" and "1     EXT" formats
+    # This regex matches: number + optional letter + (period OR multiple spaces) + optional spaces
+    normalized = normalized.gsub(/^\d+[A-Z]?(\.\s*|\s{2,})/, '')
 
-    # Remove trailing scene numbers (e.g., "EXT. LOCATION DAY     1" -> "EXT. LOCATION DAY")
-    normalized = normalized.gsub(/\s+\d+$/, '')
+    # Remove trailing scene numbers (common in script format like "1     EXT. LOCATION DAY     1")
+    normalized = normalized.gsub(/\s+\d+[A-Z]?$/, '')
 
     # Normalize multiple spaces to single spaces
     normalized = normalized.gsub(/\s+/, ' ')
 
-    # Remove trailing whitespace
-    normalized = normalized.strip
+    # Remove trailing whitespace and periods
+    normalized = normalized.strip.gsub(/\.$/, '')
 
     return normalized
   end
