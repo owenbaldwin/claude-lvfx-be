@@ -35,17 +35,31 @@ class SluglineExtractorAgent < ApplicationAgent
       You are a professional script analyst. Extract all scene sluglines (scene headers) from this screenplay text.
 
       A slugline typically follows this format:
+      - NUMBER. INT. LOCATION - TIME
+      - NUMBER. EXT. LOCATION - TIME
       - INT. LOCATION - TIME
       - EXT. LOCATION - TIME
-      - Examples: "INT. BEDROOM - NIGHT", "EXT. PARK - DAY"
+      - Examples: "1. INT. BEDROOM - NIGHT", "15. EXT. BEACH - DAY", "47. INT./EXT. BEDROOM - NIGHT", "EXT. BEDROOM - DAY"
+      - Some scripts use "INT./EXT." to indicate a scene that is both inside and outside.
+      - Some scripts use numbered scenes, some scripts use roman numerals and some scripts don't have numbered scenes.
+      - Some scripts use numbers like "1A" or "1B" to indicate a continuation of the previous scene.
 
       Please extract ONLY the sluglines and return them as a JSON array of objects with this format:
       [
-        {"text": "INT. BEDROOM - NIGHT", "line_number": 1},
-        {"text": "EXT. PARK - DAY", "line_number": 15}
+        {"text": "1. INT. BEDROOM - NIGHT", "line_number": 1},
+        {"text": "2. EXT. PARK - DAY", "line_number": 2},
+        {"text": "3A. INT. BEDROOM - NIGHT", "line_number": 3},
+        {"text": "3B. INT. BEDROOM - DAY", "line_number": 4},
+        {"text": "4. EXT. GARDEN - DAY", "line_number": 5},
       ]
 
-      If no sluglines are found, return an empty array: []
+      As you can see, when scenes use numbers and letters, then the line_number will become different to the scene number. Line_number is an index.
+
+      Make sure to extract all sluglines until the end of the script, even if they are not in the format above.
+
+      If you find a scene number repeating but followed by "CONT'D" or "(CONT'D)" or "CONTINUED" or "(CONTINUED)" then it is a continuation of the previous scene: just ignore the repeat and continue extracting.
+
+      If no sluglines are found, check the script text for any other headers that might be scene headings. Only stop the slugline extraction when you reach the end of the script.
 
       Script text:
       #{script_text}

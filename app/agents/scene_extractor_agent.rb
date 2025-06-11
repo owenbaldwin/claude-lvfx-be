@@ -143,6 +143,7 @@ class SceneExtractorAgent < ApplicationAgent
     slugline_patterns.any? { |pattern| normalized_line.match?(pattern) }
   end
 
+  # Scene number: #{scene_number}
   def build_scene_extraction_prompt(scene_content, slugline, scene_number)
     <<~PROMPT
       You are an expert script parser specializing in extracting detailed scene information from movie scripts.
@@ -150,10 +151,10 @@ class SceneExtractorAgent < ApplicationAgent
       Your task is to analyze the provided scene content and extract all the information for this specific scene.
 
       Scene to extract: "#{slugline}"
-      Scene number: #{scene_number}
+
 
       You need to extract:
-      1. Parse the slugline to identify INT/EXT, LOCATION, and TIME
+      1. Parse the slugline to identify the scene number (if present), INT/EXT, LOCATION, and TIME
       2. Extract all characters that appear in this scene
       3. Extract all dialogue and action beats in chronological order
       4. Extract the scene description if present
@@ -163,27 +164,29 @@ class SceneExtractorAgent < ApplicationAgent
 
       Return your response as valid JSON in this EXACT format:
       {
-        "scene_number": #{scene_number},
+        "scene_number": "scene number (as parsed from slugline)",
         "int_ext": "INT" or "EXT" (parsed from slugline),
         "location": "LOCATION NAME" (parsed from slugline),
         "time": "TIME OF DAY" (parsed from slugline),
-        "description": "Scene description if any, otherwise empty string",
+        "description": "write a short description of the scene in your own words",
         "characters": ["CHARACTER1", "CHARACTER2", ...],
         "action_beats": [
           {
             "type": "action",
             "content": "Action description text",
-            "characters": ["CHARACTER1"] or [] if no specific characters
+            "characters": ["CHARACTER1", "CHARACTER2", ...] or [] if no specific characters
           },
           {
             "type": "dialogue",
             "content": "The actual dialogue text",
             "characters": ["SPEAKING_CHARACTER"]
-          }
+          }, ...
         ]
       }
 
       Important parsing rules:
+      - Scene number: Extract the scene number from the slugline if present. It will be a number or a roman numeral or a number and a letter. If it contains a letter, then include the letter in the scene number.
+      - If you encounter a scene number that repeats but is followed by "CONT'D" or "(CONT'D)" or "CONTINUED" or "(CONTINUED)" then it is a continuation of the previous scene: just ignore the repeat and continue extracting until you reach the next scene (different scene number and/or different INT/EXT and/or different location and/or different time).
       - INT/EXT: Extract "INT" or "EXT" from the slugline
       - LOCATION: Extract the location name (e.g., "LIVING ROOM", "BEACH")
       - TIME: Extract time of day (e.g., "DAY", "NIGHT", "SUNSET")
@@ -191,6 +194,8 @@ class SceneExtractorAgent < ApplicationAgent
       - Action beats: Separate action descriptions and dialogue into individual beats
       - Dialogue: Each piece of dialogue should be a separate beat with the speaking character
       - Content: Include the actual text content, not just summaries
+
+      Make sure to extract all the information from the scene exactly as it is in the script. Be as accurate as possible.
 
       Ensure the JSON is valid and properly formatted.
     PROMPT
