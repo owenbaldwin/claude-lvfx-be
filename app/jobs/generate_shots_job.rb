@@ -154,6 +154,9 @@ class GenerateShotsJob < ApplicationJob
 
         beat_shots = []
 
+        # Find the next shot number for this action beat ONCE before the loop
+        max_shot_number = Shot.where(action_beat_id: beat_id).maximum(:number) || 0
+
         shots_array.each_with_index do |shot_data, index|
           unless shot_data.is_a?(Hash) && shot_data["description"].present?
             Rails.logger.warn "[GenerateShotsJob] ⚠️ Invalid shot data for beat #{beat_id}: #{shot_data.inspect}"
@@ -161,8 +164,7 @@ class GenerateShotsJob < ApplicationJob
           end
 
           begin
-            # Find the next shot number for this action beat
-            max_shot_number = Shot.where(action_beat_id: beat_id).maximum(:number) || 0
+            # Calculate shot number based on the initial max + index
             shot_number = max_shot_number + index + 1
 
             shot = Shot.create!(
