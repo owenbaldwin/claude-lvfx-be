@@ -107,6 +107,8 @@ module Api
         # Get production and validate user access
         @production = @current_user.productions.find(params[:production_id])
 
+        Rails.logger.info "[ActionBeatsController] Full params: #{params.to_unsafe_h.inspect}"
+
         # Validate required parameters
         unless params[:action_beat_ids].present?
           render json: { error: 'action_beat_ids parameter is required' }, status: :bad_request
@@ -123,6 +125,12 @@ module Api
         # Convert to integers
         action_beat_ids = action_beat_ids.map(&:to_i)
 
+        # Get shots_per_beat parameter, default to 1
+        shots_per_beat = params[:shots_per_beat]&.to_i || 1
+
+        Rails.logger.info "[ActionBeatsController] Received shots_per_beat param: #{params[:shots_per_beat].inspect}"
+        Rails.logger.info "[ActionBeatsController] Final shots_per_beat value: #{shots_per_beat}"
+
         # Validate that all action beats belong to this production
         action_beats = ActionBeat.where(id: action_beat_ids, production_id: @production.id)
         if action_beats.count != action_beat_ids.count
@@ -134,7 +142,11 @@ module Api
         # Create ShotGeneration record to track the job
         shot_generation = @production.shot_generations.create!(
           job_id: SecureRandom.uuid,
-          status: 'pending'
+          status: 'pending',
+          results_json: {
+            action_beat_ids: action_beat_ids,
+            shots_per_beat: shots_per_beat
+          }
         )
 
         # Queue the background job with the shot_generation ID
