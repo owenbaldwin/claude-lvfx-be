@@ -14,6 +14,11 @@ class GenerateShotsJob < ApplicationJob
       # Update status to processing
       shot_generation.update!(status: 'processing')
 
+      # Get shots_per_beat from shot_generation results_json, default to 1
+      shots_per_beat = shot_generation.results_json&.dig('shots_per_beat') || 1
+
+      Rails.logger.info "[GenerateShotsJob] shots_per_beat = #{shots_per_beat}"
+
       # Load action beats with necessary associations
       beats = ActionBeat.includes(:scene, character_appearances: :character)
                         .find(action_beat_ids)
@@ -36,7 +41,10 @@ class GenerateShotsJob < ApplicationJob
       Rails.logger.info "[GenerateShotsJob] Built beats data for #{beats_data.count} beats"
 
       # Construct batched prompt
-      prompt = build_shots_prompt(beats_data)
+      prompt = build_shots_prompt(beats_data, shots_per_beat)
+
+      Rails.logger.info "[GenerateShotsJob] Generated prompt with shots_per_beat: #{shots_per_beat}"
+      Rails.logger.debug "[GenerateShotsJob] Full prompt: #{prompt}"
 
       # Initialize OpenAI client
       client = OpenAI::Client.new(
@@ -83,6 +91,7 @@ class GenerateShotsJob < ApplicationJob
       begin
         parsed = JSON.parse(raw_json)
         Rails.logger.info "[GenerateShotsJob] Successfully parsed JSON response"
+        Rails.logger.debug "[GenerateShotsJob] Parsed response: #{parsed.inspect}"
       rescue JSON::ParserError => parse_err
         Rails.logger.error "[GenerateShotsJob] ✗ JSON parse failed: #{parse_err.message}"
         Rails.logger.error "→ raw_content was: #{raw_json.inspect}"
@@ -141,6 +150,8 @@ class GenerateShotsJob < ApplicationJob
           next
         end
 
+        Rails.logger.info "[GenerateShotsJob] Processing beat #{beat_id} with #{shots_array.length} shots"
+
         beat_shots = []
 
         shots_array.each_with_index do |shot_data, index|
@@ -189,15 +200,15 @@ class GenerateShotsJob < ApplicationJob
 
       Rails.logger.info "[GenerateShotsJob] ✅ Job completed successfully. Created #{created_shots_count} shots"
 
-      # Update shot_generation with successful results
+      # Update shot_generation with successful results, preserving original data
+      original_data = shot_generation.results_json || {}
       shot_generation.update!(
         status: 'completed',
-        results_json: {
-          action_beat_ids: action_beat_ids,
+        results_json: original_data.merge({
           shots_created: created_shots_count,
           shots_by_beat: created_shots_data,
           completed_at: Time.current
-        }
+        })
       )
 
     rescue => e
@@ -216,7 +227,7 @@ class GenerateShotsJob < ApplicationJob
 
   private
 
-  def build_shots_prompt(beats_data)
+  def build_shots_prompt(beats_data, shots_per_beat)
     beats_summary = beats_data.map do |beat|
       <<~BEAT
         Beat ID: #{beat[:id]}
@@ -230,7 +241,7 @@ class GenerateShotsJob < ApplicationJob
     <<~PROMPT
       You are a professional cinematographer and film production assistant. You will receive information about action beats from a film script, and your job is to generate creative and technically sound shot ideas for each beat.
 
-      For each action beat provided, generate exactly 5 distinct shot ideas that would effectively capture the content and emotion of that beat. Consider:
+      For each action beat provided, generate exactly #{shots_per_beat} distinct shot ideas that would effectively capture the content and emotion of that beat. Consider:
       - The type of beat (action vs dialogue)
       - The characters involved
       - The scene context
@@ -241,23 +252,12 @@ class GenerateShotsJob < ApplicationJob
 
       #{beats_summary}
 
-      Return exactly one JSON object with keys equal to the beat IDs (as strings), where each key maps to an array of exactly 5 shot objects. Each shot object must have a "description" field containing a detailed description of the shot.
+      Return exactly one JSON object with keys equal to the beat IDs (as strings), where each key maps to an array of exactly #{shots_per_beat} shot objects. Each shot object must have a "description" field containing a detailed description of the shot.
 
       Example format:
       {
         "123": [
-          {"description": "Wide establishing shot showing the entire kitchen as John enters through the doorway"},
-          {"description": "Medium close-up of John's face as he realizes something is wrong"},
-          {"description": "Over-the-shoulder shot from John's perspective looking at the overturned chair"},
-          {"description": "Low angle medium shot of John approaching the chair cautiously"},
-          {"description": "Extreme close-up of John's hand reaching for the chair"}
-        ],
-        "124": [
-          {"description": "Two-shot of John and Mary in profile as they face each other"},
-          {"description": "Close-up of Mary's eyes showing her concern"},
-          {"description": "Reverse shot close-up of John as he responds"},
-          {"description": "Wide shot pulling back to show them in the context of the room"},
-          {"description": "Dutch angle medium shot creating visual tension during their exchange"}
+          #{(1..shots_per_beat).map { |i| '{"description": "Shot description ' + i.to_s + '"}' }.join(",\n          ")}
         ]
       }
 
