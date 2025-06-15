@@ -18,6 +18,7 @@ class ActionBeat < ApplicationRecord
 
   has_many   :shots, dependent: :destroy
   has_many   :character_appearances, dependent: :nullify
+  has_many   :cost_estimates, dependent: :destroy
   validates :number, presence: true, numericality: { only_integer: true }
   validates :number,
           uniqueness: { scope: [:scene_id, :version_number],
@@ -31,6 +32,7 @@ class ActionBeat < ApplicationRecord
   before_validation :set_versioning_fields
 
   before_create :bump_version_and_link_previous
+  after_create :create_cost_estimate
 
   private
 
@@ -74,5 +76,9 @@ class ActionBeat < ApplicationRecord
 
     # ensure the new one is active
     self.is_active = true
+  end
+
+  def create_cost_estimate
+    cost_estimates.create!(action_beat_id: id, production_id: production_id)
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_06_11_185346) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_14_225850) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -125,6 +125,37 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_11_185346) do
     t.index ["user_id"], name: "index_complexities_on_user_id"
   end
 
+  create_table "cost_estimates", force: :cascade do |t|
+    t.float "rate"
+    t.float "margin"
+    t.float "gross"
+    t.float "net"
+    t.float "gross_average"
+    t.float "net_average"
+    t.text "notes"
+    t.text "ai_notes"
+    t.bigint "incentive_id"
+    t.bigint "sequence_id"
+    t.bigint "scene_id"
+    t.bigint "action_beat_id"
+    t.bigint "shot_id"
+    t.bigint "asset_id"
+    t.bigint "fx_id"
+    t.bigint "assumption_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "production_id", null: false
+    t.index ["action_beat_id"], name: "index_cost_estimates_on_action_beat_id"
+    t.index ["asset_id"], name: "index_cost_estimates_on_asset_id"
+    t.index ["assumption_id"], name: "index_cost_estimates_on_assumption_id"
+    t.index ["fx_id"], name: "index_cost_estimates_on_fx_id"
+    t.index ["incentive_id"], name: "index_cost_estimates_on_incentive_id"
+    t.index ["production_id"], name: "index_cost_estimates_on_production_id"
+    t.index ["scene_id"], name: "index_cost_estimates_on_scene_id"
+    t.index ["sequence_id"], name: "index_cost_estimates_on_sequence_id"
+    t.index ["shot_id"], name: "index_cost_estimates_on_shot_id"
+  end
+
   create_table "fxes", force: :cascade do |t|
     t.string "name"
     t.text "description"
@@ -134,6 +165,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_11_185346) do
     t.datetime "updated_at", null: false
     t.index ["complexity_id"], name: "index_fxes_on_complexity_id"
     t.index ["production_id"], name: "index_fxes_on_production_id"
+  end
+
+  create_table "incentives", force: :cascade do |t|
+    t.string "name"
+    t.float "percentage"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "production_id", null: false
+    t.text "description"
+    t.index ["production_id"], name: "index_incentives_on_production_id"
   end
 
   create_table "production_users", force: :cascade do |t|
@@ -322,8 +363,18 @@ ActiveRecord::Schema[7.1].define(version: 2025_06_11_185346) do
   add_foreign_key "characters", "productions"
   add_foreign_key "complexities", "productions"
   add_foreign_key "complexities", "users"
+  add_foreign_key "cost_estimates", "action_beats"
+  add_foreign_key "cost_estimates", "assets"
+  add_foreign_key "cost_estimates", "assumptions"
+  add_foreign_key "cost_estimates", "fxes"
+  add_foreign_key "cost_estimates", "incentives"
+  add_foreign_key "cost_estimates", "productions"
+  add_foreign_key "cost_estimates", "scenes"
+  add_foreign_key "cost_estimates", "sequences"
+  add_foreign_key "cost_estimates", "shots"
   add_foreign_key "fxes", "complexities"
   add_foreign_key "fxes", "productions"
+  add_foreign_key "incentives", "productions"
   add_foreign_key "production_users", "productions"
   add_foreign_key "production_users", "users"
   add_foreign_key "scenes", "productions"

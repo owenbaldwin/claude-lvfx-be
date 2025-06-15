@@ -16,6 +16,7 @@ class Scene < ApplicationRecord
   belongs_to :production
   has_many   :action_beats, dependent: :destroy
   has_many :character_appearances, dependent: :nullify
+  has_many   :cost_estimates, dependent: :destroy
 
   validates :number,    presence: true, numericality: { only_integer: true }
   # validates :number,    uniqueness: { scope: :sequence_id }
@@ -32,6 +33,7 @@ class Scene < ApplicationRecord
   before_validation :set_versioning_fields
 
   before_create :bump_version_and_link_previous
+  after_create :create_cost_estimate
 
   private
 
@@ -73,5 +75,9 @@ class Scene < ApplicationRecord
 
     # ensure the new one is active
     self.is_active = true
+  end
+
+  def create_cost_estimate
+    cost_estimates.create!(scene_id: id, production_id: production_id)
   end
 end

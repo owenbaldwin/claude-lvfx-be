@@ -14,6 +14,7 @@ class Sequence < ApplicationRecord
   belongs_to :script, optional: true
   belongs_to :production
   has_many   :scenes, dependent: :destroy
+  has_many   :cost_estimates, dependent: :destroy
 
   validates :number, presence: true, numericality: { only_integer: true }
   validates :number, uniqueness: { scope: :production_id }
@@ -23,6 +24,7 @@ class Sequence < ApplicationRecord
             allow_blank: true
 
   before_validation :set_versioning_fields
+  after_create :create_cost_estimate
 
   private
 
@@ -41,5 +43,9 @@ class Sequence < ApplicationRecord
                     .maximum(:version_number) || 0
       self.version_number ||= max + 1
     end
+  end
+
+  def create_cost_estimate
+    cost_estimates.create!(sequence_id: id, production_id: production_id)
   end
 end

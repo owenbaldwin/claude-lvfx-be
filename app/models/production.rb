@@ -15,6 +15,8 @@ class Production < ApplicationRecord
   has_many :fxs, dependent: :destroy
   has_many :shot_generations, dependent: :destroy
   has_many :script_parses, dependent: :destroy
+  has_many :cost_estimates, dependent: :destroy
+  has_many :incentives, dependent: :destroy
 
   validates :title, presence: true
 

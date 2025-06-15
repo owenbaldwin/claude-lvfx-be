@@ -24,6 +24,19 @@ Rails.application.routes.draw do
         resources :assets
         resources :fx
 
+        # Cost estimates and incentives
+        resources :cost_estimates
+        resources :incentives
+
+        # Cost estimate routes for specific resources
+        get 'sequences/:sequence_id/cost_estimate', to: 'cost_estimates#show_for_sequence'
+        get 'scenes/:scene_id/cost_estimate', to: 'cost_estimates#show_for_scene'
+        get 'action_beats/:action_beat_id/cost_estimate', to: 'cost_estimates#show_for_action_beat'
+        get 'shots/:shot_id/cost_estimate', to: 'cost_estimates#show_for_shot'
+        get 'assets/:asset_id/cost_estimate', to: 'cost_estimates#show_for_asset'
+        get 'assumptions/:assumption_id/cost_estimate', to: 'cost_estimates#show_for_assumption'
+        get 'fx/:fx_id/cost_estimate', to: 'cost_estimates#show_for_fx'
+
         # Action beats routes for shot generation
         resources :action_beats, only: [] do
           collection do
